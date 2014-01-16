@@ -7,7 +7,7 @@ import roslib
 roslib.load_manifest("people_follow")
 import sys, rospy, cv, cv2
 from std_msgs.msg import String
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Point
 from sensor_msgs.msg import Image, LaserScan, Joy
 import numpy as np
 from cv_bridge import CvBridge, CvBridgeError
@@ -34,7 +34,7 @@ class people_follow:
         self.detection_timeout = rospy.Duration(config["detection_timeout"])
         self.hog = cv2.HOGDescriptor()
         self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-        # store the laser range readings here
+        self.obstacle_vector = None
         if self.debug:
             cv2.namedWindow("Camera Feed")
 
@@ -44,9 +44,10 @@ class people_follow:
         rospy.init_node('people_follow', anonymous=True)
         self.republisher = subprocess.Popen("rosrun image_transport republish compressed in:=/axis/image_raw raw out:=/axis/image_raw/decompressed", shell=True)
         self.control_pub = rospy.Publisher("husky/cmd_vel", Twist)
-        self.image_sub = rospy.Subscriber("axis/image_raw/decompressed", Image, self.handle_image)
-        self.laser_sub = rospy.Subscriber("lidar/scan", LaserScan, self.handle_laser)
-        self.joy_sub = rospy.Subscriber("joy", Joy, self.handle_joy)
+        rospy.Subscriber("axis/image_raw/decompressed", Image, self.handle_image)
+        rospy.Subscriber("lidar/scan", LaserScan, self.handle_laser)
+        rospy.Subscriber("potential_field_sum", Point, self.handle_potential)
+        rospy.Subscriber("joy", Joy, self.handle_joy)
         self.bridge = CvBridge()
 
 #----------------------------------------------------
@@ -84,6 +85,11 @@ class people_follow:
         self.angle_min = data.angle_min
         self.angle_max = data.angle_max
         self.angle_increment = data.angle_increment
+
+#----------------------------------------------------
+
+    def handle_potential(self, data):
+        self.obstacle_vector = np.array([data.x, data.y])
 
 #----------------------------------------------------
 
@@ -186,7 +192,7 @@ class people_follow:
     def calculate_speed(self):
         # use potential field sum vector to decide
         # which direction to move
-        vector = self.calculate_potential_field_sum()
+        vector = self.calculate_trajectory()
         # don't go backward
         forward_amount = max(0, vector[0] * self.max_speed)
         turn_amount = -vector[1] * self.turning_rate
@@ -199,50 +205,17 @@ class people_follow:
 
 #----------------------------------------------------
 
-    # return a weight to multiply the repulsive force by,
-    # based on the angle the laser reading is at.
-    # This is intended to weight obstacles in front of the
-    # robot more heavily than objects to the side of the robot.
-    def weight_obstacle(self, angle):
-        diff = abs(angle)
-        max_diff = self.angle_max
-        normalized_diff = diff / max_diff
-        slope = self.max_obstacle_weight - self.min_obstacle_weight
-        return (1.0 - normalized_diff) * slope + self.min_obstacle_weight
-
-#----------------------------------------------------
-
-    def calculate_potential_field_sum(self):
-        if self.target == None:
+    def calculate_trajectory(self):
+        if self.target == None or self.obstacle_vector == None:
             user_vector = np.array([0.0, 0.0])
         else:
             heading = -np.pi/2 + self.target * np.pi
             magnitude = self.user_attract
             user_vector = angle_mag_to_2d_vector(heading, magnitude)
 
-        obstacle_vector_sum = np.array([0.0, 0.0])
-        angle = self.angle_min
-        resolution = self.angle_increment
-        count = 0.0
-        for r in self.ranges:
-            if (r < self.range_min or
-                    angle > self.potential_field_max_angle or
-                    angle < self.potential_field_min_angle):
-                distance = self.range_max
-            else:
-                distance = r
-            mag = 1.0 / (distance * distance) * self.weight_obstacle(angle)
-            vector = angle_mag_to_2d_vector(angle + np.pi, mag)
-            obstacle_vector_sum += vector
-            angle += resolution
-            count += 1
-
-        # normalize a bit
-        obstacle_vector_sum /= count
-
-        #print "Obstacle vector: %s" % obstacle_vector_sum
-        #print "User vector: %s" % user_vector
-        #print "Resultant vector: %s" % (user_vector + obstacle_vector_sum)
+        obstacle_vector_sum = self.obstacle_vector
+        if self.obstacle_vector == None:
+            obstacle_vector_sum = np.array([0.0, 0.0])
 
         return user_vector + obstacle_vector_sum
 
@@ -294,13 +267,9 @@ def main(args):
         emergency_stop_box_depth = 0.5,
         # must be 5 danger readings to be sure we're close to an obstacle
         min_laser_readings = 5, 
-        potential_field_min_angle = -np.pi/2,
-        potential_field_max_angle = np.pi/2,
-        max_speed = 1.0,
+        max_speed = 0.95,
         min_linear_speed = 0.1,
         min_angular_speed = 0.1,
-        min_obstacle_weight = 1.5,
-        max_obstacle_weight = 6.0,
         user_attract = 1.0,
         control_rate = 30,
         autonomy_button = 3,

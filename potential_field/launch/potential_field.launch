@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="potential_field" name="potential_field" type="potential_field.py">
+    </node>
+</launch>

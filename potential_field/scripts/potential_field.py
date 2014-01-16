@@ -17,6 +17,9 @@ class potential_field:
 
         laser_topic = rospy.get_param("~laser_topic", "lidar/scan")
         potential_field_topic = rospy.get_param("~potential_field_topic", "potential_field_sum")
+
+        self.sample_rate = rospy.get_param("~sample_rate", 5)
+
         self.min_angle = rospy.get_param("~min_angle", -np.pi/2)
         self.max_angle = rospy.get_param("~max_angle", np.pi/2)
         self.side_obstacle_force = rospy.get_param("~side_obstacle_force", 2.0)
@@ -25,14 +28,24 @@ class potential_field:
         self.laser_sub = rospy.Subscriber(laser_topic, LaserScan, self.handle_laser)
         self.potential_field_pub = rospy.Publisher(potential_field_topic, Point)
 
+        # laser readings
+        self.laser = None
+
 #------------------------------------------
 
     def start(self):
-        rospy.spin()
+        rate = rospy.Rate(self.sample_rate)
+        while not rospy.is_shutdown():
+            self.compute_potential()
+            rate.sleep()
 
 #------------------------------------------
 
-    def handle_laser(self, laser_data):
+    def compute_potential(self):
+        if self.laser == None:
+            return
+
+        laser_data = self.laser
         ranges = laser_data.ranges
         angle = laser_data.angle_min
         resolution = laser_data.angle_increment
@@ -59,6 +72,12 @@ class potential_field:
 
         self.publish_sum(vector_sum[0], vector_sum[1])
 
+
+#------------------------------------------
+
+    def handle_laser(self, laser_data):
+        self.laser = laser_data
+        
 #------------------------------------------
 
     # make the force linear in the angle of the reading,
@@ -73,6 +92,7 @@ class potential_field:
 #------------------------------------------
 
     def publish_sum(self, x, y):
+        print "publishing sum %s %s" % (x,y)
         vector = Point(x, y, 0)
         self.potential_field_pub.publish(vector)
 
