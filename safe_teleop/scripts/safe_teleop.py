@@ -5,6 +5,26 @@
 # a safe navigation vector from the joystick command
 # and the surrounding obstacles
 
+#-------------------------------------------------
+
+# NODE PARAMETERS:
+
+# ~joy_topic                "joy"
+# ~potential_field_topic    "potential_field_sum"
+# ~cmd_vel_topic            "husky/cmd_vel"
+# ~plan_cmd_vel_topic       "plan_cmd_vel"
+
+# ~joy_vector_magnitude     1.5
+# ~drive_scale              1.0
+# ~turn_scale               1.0
+# ~safe_reverse_speed       0.2
+# ~cmd_rate                 10.0
+
+# ~deadman_button           0
+# ~planner_button           1
+
+#-------------------------------------------------
+
 import roslib, sys, rospy
 from sensor_msgs.msg import LaserScan, Joy
 from geometry_msgs.msg import Point, Twist
@@ -19,32 +39,44 @@ class safe_teleop:
         joy_topic = rospy.get_param("~joy_topic", "joy")
         potential_field_topic = rospy.get_param("~potential_field_topic", "potential_field_sum")
         cmd_vel_topic = rospy.get_param("~cmd_vel_topic", "husky/cmd_vel")
+        plan_cmd_vel_topic = rospy.get_param("~plan_cmd_vel_topic", "plan_cmd_vel")
 
-        self.joy_sub = rospy.Subscriber(joy_topic, Joy, self.handle_joy)
-        self.field_sub = rospy.Subscriber(potential_field_topic, Point, self.handle_potential_field)
+        rospy.Subscriber(joy_topic, Joy, self.handle_joy)
+        rospy.Subscriber(potential_field_topic, Point, self.handle_potential_field)
+        rospy.Subscriber(plan_cmd_vel_topic, Twist, self.handle_plan)
 
         self.cmd_pub = rospy.Publisher(cmd_vel_topic, Twist)
 
         self.obstacle_vector = None
         self.joy_vector = None
 
-        self.magnitude = rospy.get_param("~joy_vector_magnitude", 10)
+        self.magnitude = rospy.get_param("~joy_vector_magnitude", 1.5)
         self.drive_scale = rospy.get_param("~drive_scale", 1)
         self.turn_scale = rospy.get_param("~turn_scale", 1)
+        self.safe_reverse_speed = rospy.get_param("~safe_reverse_speed", 0.2)
 
         self.joy_data = None
 
-        # TODO: figure out which buttons correspond to the bumpers
-        self.override_buttons = [0, 6, 7]
-        self.deadman_button = 0
+        # X = 0
+        # A = 1
+        # B = 2
+        # Y = 3
+        # LBump = 4
+        # RBump = 5
+        self.deadman_button = rospy.get_param("~deadman_button", 0)
+        self.planner_button = rospy.get_param("~planner_button", 1)
+        self.override_buttons = [self.deadman_button, 4, 5]
 
         self.safe_motion = False
         self.override = False
+        self.planned_motion = False
+
+        self.planner_cmd = Twist()
 
 #-------------------------------------------------
 
     def start(self):
-        rate = rospy.Rate(rospy.get_param("~cmd_rate", 20))
+        rate = rospy.Rate(rospy.get_param("~cmd_rate", 10))
         while not rospy.is_shutdown():
             cmd = self.compute_motion_cmd()
             if cmd != None:
@@ -59,10 +91,20 @@ class safe_teleop:
     def compute_motion_cmd(self):
         cmd = None
 
-        if self.override:
+        if self.joy_data == None:
+            cmd = None
+    
+        # don't move if we're not touching the thumb stick
+        elif self.joy_data.axes[1] == 0.0 and self.joy_data.axes[0] == 0.0:
+            cmd = None
+
+        elif self.override:
             cmd = Twist()
-            cmd.linear.x = data.axes[1] * self.drive_scale
-            cmd.angular.z = data.axes[0] * self.turn_scale
+            cmd.linear.x = self.joy_data.axes[1] * self.drive_scale
+            cmd.angular.z = self.joy_data.axes[0] * self.turn_scale
+
+        elif self.planned_motion:
+            cmd = self.planner_cmd
 
         elif self.safe_motion:
             if self.joy_vector == None or self.obstacle_vector == None:
@@ -79,15 +121,18 @@ class safe_teleop:
                 joy_cmd_vector = np.array([self.joy_data.axes[1], self.joy_data.axes[0]])
                 vector_sum *= np.linalg.norm(joy_cmd_vector)
 
-                # we can't see backward, so don't allow backward motion
-                vector_sum[0] = max(0, vector_sum[0])
+                # we can't see backward, so restrict backward motion
+                if joy_cmd_vector[0] >= 0:
+                    vector_sum[0] = max(0, vector_sum[0])
+                else:
+                    vector_sum[0] = max(-self.safe_reverse_speed, vector_sum[0])
 
                 # convert the resultant vector into a
                 # linear and angular velocity for moving the robot
 
                 cmd = Twist()
                 cmd.linear.x = vector_sum[0] * self.drive_scale
-                cmd.angular.z = vector_sum[1] * self.turn_scale
+                cmd.angular.z = vector_sum[1] * -self.turn_scale
         return cmd
 
 #-------------------------------------------------
@@ -101,9 +146,10 @@ class safe_teleop:
                 self.override = False
 
         self.safe_motion = (not self.override) and joy_data.buttons[self.deadman_button] != 0
+        self.planned_motion = (not self.override) and (not self.safe_motion) and joy_data.buttons[self.planner_button] != 0
 
         x = joy_data.axes[1]
-        y = joy_data.axes[0]
+        y = -joy_data.axes[0]
         joy_vector = np.array([x, y])
         joy_vector /= np.linalg.norm(joy_vector)
         joy_vector *= self.magnitude
@@ -114,6 +160,11 @@ class safe_teleop:
 
     def handle_potential_field(self, potential_field):
         self.obstacle_vector = np.array([potential_field.x, potential_field.y])
+
+#-------------------------------------------------
+
+    def handle_plan(self, data):
+        self.planner_cmd = data
 
 #-------------------------------------------------
 

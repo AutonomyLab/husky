@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="people_follow" name="people_follow" type="people_follow.py">
+    </node>
+</launch>
