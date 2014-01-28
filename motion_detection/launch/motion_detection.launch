@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="motion_detection" name="motion_detection" type="motion_detection.py">
+    </node>
+</launch>
