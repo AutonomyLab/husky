@@ -53,7 +53,7 @@ class motion_detection:
             return
 
         self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="bgr8")
-        self.WIDTH, self.HEIGHT, self.DEPTH = self.image.shape
+        self.HEIGHT, self.WIDTH, self.DEPTH = self.image.shape
 
         # BACKGROUND SUBTRACTION
         fgmask = self.fgbg.apply(self.image)
