@@ -20,9 +20,6 @@ class motion_detection:
         self.fgbg = cv2.BackgroundSubtractorMOG()
         self.hysteresis_sum = None
 
-        # number of frames to buffer before before publishing
-        self.TEMPORAL_WINDOW = rospy.get_param("~temporal_window", 30)
-
         # size of the image. updated each frame
         self.WIDTH = 0
         self.HEIGHT = 0

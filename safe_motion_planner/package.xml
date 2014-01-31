@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>safe_teleop</name>
+  <name>safe_motion_planner</name>
   <version>0.0.0</version>
-  <description>The safe_teleop package</description>
+  <description>The safe_motion_planner package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but mutiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://ros.org/wiki/safe_teleop</url> -->
+  <!-- <url type="website">http://ros.org/wiki/safe_motion_planner</url> -->
 
 
   <!-- Author tags are optional, mutiple are allowed, one per tag -->

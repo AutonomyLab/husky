@@ -41,7 +41,7 @@ class people_follow:
 #----------------------------------------------------
 
     def setup_ros_node(self):
-        rospy.init_node('people_follow', anonymous=True)
+        rospy.init_node('people_follow')
         self.republisher = subprocess.Popen("rosrun image_transport republish compressed in:=/axis/image_raw raw out:=/axis/image_raw/decompressed", shell=True)
         self.control_pub = rospy.Publisher("husky/cmd_vel", Twist)
         rospy.Subscriber("axis/image_raw/decompressed", Image, self.handle_image)

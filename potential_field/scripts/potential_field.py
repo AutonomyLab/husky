@@ -92,7 +92,6 @@ class potential_field:
 #------------------------------------------
 
     def publish_sum(self, x, y):
-        print "publishing sum %s %s" % (x,y)
         vector = Point(x, y, 0)
         self.potential_field_pub.publish(vector)
 
