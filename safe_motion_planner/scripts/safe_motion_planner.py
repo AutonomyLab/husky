@@ -91,9 +91,38 @@ class safe_teleop:
     def compute_motion_cmd(self):
         cmd = None
 
-        if self.joy_data == None:
+        if self.joy_data == None or self.obstacle_vector == None:
             cmd = None
-    
+
+        elif self.planned_motion and self.planner_cmd == None:
+            cmd = None
+ 
+        elif self.planned_motion:
+            cmd = self.planner_cmd
+
+            # convert planned command to direction vector
+            # and add it to obstacle vector to find resulting
+            # safe motion.
+
+            cmd_vector = np.asarray([cmd.linear.x, -cmd.angular.z])
+            cmd_vector /= np.linalg.norm(cmd_vector)
+            cmd_vector *= self.magnitude
+
+            vector_sum = cmd_vector + self.obstacle_vector
+            vector_sum /= np.linalg.norm(vector_sum)
+
+            # we can't see backward, so restrict backward motion
+            if joy_cmd_vector[0] >= 0:
+                vector_sum[0] = max(0, vector_sum[0])
+            else:
+                vector_sum[0] = max(-self.safe_reverse_speed, vector_sum[0])
+            # convert the resultant vector into a
+            # linear and angular velocity for moving the robot
+
+            cmd = Twist()
+            cmd.linear.x = vector_sum[0] * self.drive_scale
+            cmd.angular.z = vector_sum[1] * -self.turn_scale
+   
         # don't move if we're not touching the thumb stick
         elif self.joy_data.axes[1] == 0.0 and self.joy_data.axes[0] == 0.0:
             cmd = None
@@ -103,40 +132,29 @@ class safe_teleop:
             cmd.linear.x = self.joy_data.axes[1] * self.drive_scale
             cmd.angular.z = self.joy_data.axes[0] * self.turn_scale
 
-        elif self.planned_motion:
-            cmd = self.planner_cmd
-
-            # TODO: convert planned command to direction vector
-            # and add it to obstacle vector to find resulting
-            # safe motion.
-
         elif self.safe_motion:
-            if self.joy_vector == None or self.obstacle_vector == None:
-                cmd = None
-            
+            vector_sum = self.joy_vector + self.obstacle_vector
+            vector_sum /= np.linalg.norm(vector_sum)
+
+            # multiply by the norm of the joystick command,
+            # so we only move a little when the axes are only
+            # slightly pressed
+
+            joy_cmd_vector = np.array([self.joy_data.axes[1], self.joy_data.axes[0]])
+            vector_sum *= np.linalg.norm(joy_cmd_vector)
+
+            # we can't see backward, so restrict backward motion
+            if joy_cmd_vector[0] >= 0:
+                vector_sum[0] = max(0, vector_sum[0])
             else:
-                vector_sum = self.joy_vector + self.obstacle_vector
-                vector_sum /= np.linalg.norm(vector_sum)
+                vector_sum[0] = max(-self.safe_reverse_speed, vector_sum[0])
 
-                # multiply by the norm of the joystick command,
-                # so we only move a little when the axes are only
-                # slightly pressed
+            # convert the resultant vector into a
+            # linear and angular velocity for moving the robot
 
-                joy_cmd_vector = np.array([self.joy_data.axes[1], self.joy_data.axes[0]])
-                vector_sum *= np.linalg.norm(joy_cmd_vector)
-
-                # we can't see backward, so restrict backward motion
-                if joy_cmd_vector[0] >= 0:
-                    vector_sum[0] = max(0, vector_sum[0])
-                else:
-                    vector_sum[0] = max(-self.safe_reverse_speed, vector_sum[0])
-
-                # convert the resultant vector into a
-                # linear and angular velocity for moving the robot
-
-                cmd = Twist()
-                cmd.linear.x = vector_sum[0] * self.drive_scale
-                cmd.angular.z = vector_sum[1] * -self.turn_scale
+            cmd = Twist()
+            cmd.linear.x = vector_sum[0] * self.drive_scale
+            cmd.angular.z = vector_sum[1] * -self.turn_scale
         return cmd
 
 #-------------------------------------------------
