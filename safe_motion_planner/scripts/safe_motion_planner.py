@@ -20,8 +20,8 @@
 # ~safe_reverse_speed       0.2
 # ~cmd_rate                 10.0
 
-# ~deadman_button           0
-# ~planner_button           1
+# ~deadman_button           0 (X)
+# ~planner_button           3 (Y)
 
 #-------------------------------------------------
 
@@ -64,7 +64,7 @@ class safe_teleop:
         # LBump = 4
         # RBump = 5
         self.deadman_button = rospy.get_param("~deadman_button", 0)
-        self.planner_button = rospy.get_param("~planner_button", 1)
+        self.planner_button = rospy.get_param("~planner_button", 3)
         self.override_buttons = [self.deadman_button, 4, 5]
 
         self.safe_motion = False
@@ -105,6 +105,10 @@ class safe_teleop:
 
         elif self.planned_motion:
             cmd = self.planner_cmd
+
+            # TODO: convert planned command to direction vector
+            # and add it to obstacle vector to find resulting
+            # safe motion.
 
         elif self.safe_motion:
             if self.joy_vector == None or self.obstacle_vector == None:
