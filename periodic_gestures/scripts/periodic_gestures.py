@@ -39,10 +39,6 @@ class periodic_gestures:
         self.MAX_GESTURE_FREQUENCY = rospy.get_param("~max_gesture_freq", 2)
         self.CAMERA_FRAMERATE = rospy.get_param("~camera_framerate", 30)
 
-        # don't start processing until we've filled a whole
-        # temporal window
-        self.temporal_window_full = False
-
         # how picky are we about what constitutes a significant
         # peak in the frequency domain
         self.PEAK_STDEVS = rospy.get_param("~peak_sensitivity", 9)
@@ -60,55 +56,96 @@ class periodic_gestures:
         # filled in as we receive images
         self.WIDTH = 0
         self.HEIGHT = 0
+        self.DEPTH = 0
+
+        # areas of significant motion, as received
+        # from the motion_detection node
+        self.motion_areas = None
+
+        # where we are in the current temporal window
+        self.temporal_window_index = 0
+
+        # don't start looking for periodicity until we've filled
+        # a whole temporal window
+        self.temporal_window_full = False
+
+        # the overlapping windows in the image to check
+        self.spatial_windows = None
+
+#-----------------------------------------------------------------
+
+    def handle_motion(self, data):
+        # unpack rectangles from super-polygon
+        # and set self.motion_windows to be the list of rectangles
+
+        i = 0
+        motion = []
+        while i+2 < len(data):
+            top_left = data[i]
+            bottom_right = data[i+2]
+            motion.append((top_left, bottom_right))
+            i += 4
+
+        self.motion_areas = motion
 
 #-----------------------------------------------------------------
 
     def handle_image(self, data):
         self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="mono8")
 
-        # TODO: do something with this newly-arrived frame
+        # wait for motion detection first
+        if self.motion_areas == None:
+            return
+
+        self.HEIGHT, self.WIDTH, self.DEPTH = self.image.shape
+
+        # if we are at the beginning of a round
+        if self.temporal_window_index == 0:
+            # determine the interesting regions for this round
+            self.determine_windows_to_check()
+
+            # if we've filled a temporal window, then
+            # run Fourier analysis on all the data we've accumulated
+            if self.temporal_window_full:
+                self.identify_periodic_windows()
+
+        # get the average pixel intensity over each
+        # of the windows of interest for this round
+        self.average_each_subwindow()
+
+        # end, increment window index with rollover
+        self.temporal_window_index += 1
+        if self.temporal_window_index == self.TEMPORAL_WINDOW:
+            self.temporal_window_full = True
+        self.temporal_window_index %= self.TEMPORAL_WINDOW
 
 #-----------------------------------------------------------------
 
-    def handle_motion(self, data):
-        # TODO: unpack rectangles from super-polygon
-        # and set self.motion_windows to be the list of rectangles
+    def determine_windows_to_check(self):
+        pass
+        # TODO: run through self.motion_areas and construct a 
+        # list of overlapping regions to check for periodicity
+
+#-----------------------------------------------------------------
+    
+    def identify_periodic_windows(self):
+        pass
+        # TODO: run Fourier analysis over all windows we've
+        # been accumulating data from, and publish windows that
+        # contain periodicity, perhaps by clustering first
+    
+#-----------------------------------------------------------------
+
+    def average_each_subwindow(self):
+        pass
+        # TODO: get an average of the pixels in each window
+        # of interest that we can use at the end of the round,
+        # or at each frame of the round once the temporal window
+        # is full
 
 #-----------------------------------------------------------------
 # END CLASS PERIODIC_GESTURES
 #-----------------------------------------------------------------
-
-def initialize():
-    num_windows_x = WIDTH / (SPATIAL_WINDOW_X / OVERLAP_FACTOR)
-    num_windows_y = HEIGHT / (SPATIAL_WINDOW_Y / OVERLAP_FACTOR)
-    num_windows = num_windows_x * num_windows_y
-    for k in range(0, num_windows):
-        temporal_window = [0] * TEMPORAL_WINDOW
-        windows.append(temporal_window)
-
-
-#-----------------------------------------------------------------
-
-
-def detect_periodic(directory):
-    global windows, WIDTH, HEIGHT, WAVEFORM, FFT_THRESHOLD, last_frame, motion_detected_windows, TEMPORAL_WINDOW_FULL, PERIODIC_RECTANGLES, DISPLAY_IMAGE, CURRENT_PERIODIC_RECTANGLES, OPTICAL_FLOW_IMAGE
-
-    initialize()
-
-    i = START_FRAME
-    # iterate until we can no longer read an image
-    while True:
-        imagefile = "frame%04d.jpg" % (i+1)
-        print imagefile
-        path = "%s%s" % (directory, imagefile)
-        image = cv.LoadImage(path, cv.CV_LOAD_IMAGE_GRAYSCALE)
-        DISPLAY_IMAGE = cv.LoadImage(path)
-
-        WIDTH, HEIGHT = cv.GetSize(image)
-
-        if last_frame == None:
-            last_frame = image	
-
 
         print "calculating average of each subwindow"
         for j in range(0, len(windows)):
@@ -119,35 +156,12 @@ def detect_periodic(directory):
 
         TEMPORAL_WINDOW_FULL = (i - START_FRAME > TEMPORAL_WINDOW)
 
-
-
-
         print "calculating Fourier transforms."
         motion_detected_windows = identify_periodic_windows(windows)
-
 
         print "wrapping rectangles around areas of periodic motion"
         CURRENT_PERIODIC_RECTANGLES = wrap_rectangles_around_windows()
         PERIODIC_RECTANGLES.extend(CURRENT_PERIODIC_RECTANGLES)
-
-
-        print "exporting flow of regions with periodic motion"
-        export_periodic_regions(image)		
-
-        if OPTICAL_FLOW:
-            cv2_last = np.asarray(cv.GetMat(last_frame))
-            cv2_next = np.asarray(cv.GetMat(image))
-            flow = cv2.calcOpticalFlowFarneback(cv2_last, cv2_next, None, 0.5, 3, 15, 3, 5, 1.2, 0)
-            if OPTICAL_FLOW_HSV:
-                OPTICAL_FLOW_IMAGE = draw_hsv(flow)
-            else:
-                OPTICAL_FLOW_IMAGE = draw_flow(cv2_next, flow)
-
-        display_visuals()
-
-        last_frame = image	
-        i += 1
-
 
 #-----------------------------------------------------------------
 
