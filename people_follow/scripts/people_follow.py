@@ -101,6 +101,7 @@ if __name__ == "__main__":
         detection_timeout = 3.0,
         gesture_topic = rospy.get_param("~gesture_topic", "periodic_gestures"),
         person_topic = rospy.get_param("~person_topic", "detected_people"),
+        vel_topic = rospy.get_param("~cmd_vel_topic", "husky/plan_cmd_vel"),
         debug = False)
 
     pf = people_follow(config)
