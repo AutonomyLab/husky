@@ -31,13 +31,22 @@ class periodic_gestures:
 
         # window of frames over which to do Fourier analysis
         self.TEMPORAL_WINDOW = rospy.get_param("~temporal_window", 120)
-        self.FREQ_COMPONENTS = [3,4,5,6,7]
+        # self.FREQ_COMPONENTS = [3,4,5,6,7]
 
-        # TODO: calculate the freq_components above using
-        # the following 3 parameters
         self.MIN_GESTURE_FREQUENCY = rospy.get_param("~min_gesture_freq", 0.5)
         self.MAX_GESTURE_FREQUENCY = rospy.get_param("~max_gesture_freq", 2)
         self.CAMERA_FRAMERATE = rospy.get_param("~camera_framerate", 30)
+
+        # calculate the spectral bins using
+        # the desired frequency range and the camera framerate
+        bin_width = self.CAMERA_FRAMERATE / float(self.TEMPORAL_WINDOW)
+        smallest_bin = int(self.MIN_GESTURE_FREQUENCY / bin_width) + 1
+        freq_range = self.MAX_GESTURE_FREQUENCY - self.MIN_GESTURE_FREQUENCY
+        largest_bin = smallest_bin + int(freq_range / bin_width)
+
+        # these are our frequency bins of interest
+        self.FREQ_COMPONENTS = range(smallest_bin, largest_bin+1)
+        print "INIT: spectral bins of interest: %s" % self.FREQ_COMPONENTS
 
         # how picky are we about what constitutes a significant
         # peak in the frequency domain
@@ -173,7 +182,7 @@ class periodic_gestures:
             
             frequency_domain = abs(np.fft.fft(time_domain))
 
-            avg = np.sum(frequency_domain[1:len(frequency_domain)/2]) / (len(frequency_domain)/2-1)
+            avg = np.sum(frequency_domain[1:len(frequency_domain)/2]) / (float(len(frequency_domain)/2-1))
 
             std = np.std(frequency_domain[1:len(frequency_domain)/2])
 
@@ -191,6 +200,8 @@ class periodic_gestures:
         # TODO: run through motion_detected_windows and publish
         # a super-polygon that contains the bounding rectangle(s),
         # found by k-means clustering or simple splitting clusters.
+
+        
 
 #-----------------------------------------------------------------
 
