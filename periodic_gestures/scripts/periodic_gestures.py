@@ -38,7 +38,8 @@ class periodic_gestures:
         self.CAMERA_FRAMERATE = rospy.get_param("~camera_framerate", 30)
 
         # calculate the spectral bins using
-        # the desired frequency range and the camera framerate
+        # the desired frequency range, the camera framerate
+        # and the size of the temporal window
         bin_width = self.CAMERA_FRAMERATE / float(self.TEMPORAL_WINDOW)
         smallest_bin = int(self.MIN_GESTURE_FREQUENCY / bin_width) + 1
         freq_range = self.MAX_GESTURE_FREQUENCY - self.MIN_GESTURE_FREQUENCY
@@ -100,6 +101,13 @@ class periodic_gestures:
 #-----------------------------------------------------------------
 
     def handle_image(self, data):
+        if self.gesture_pub.get_num_connections() < 1:
+            # reset detection process so we start from
+            # scratch once someone subscribes
+            self.temporal_window_index = 0
+            self.temporal_window_full = False
+            return
+
         self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="mono8")
 
         # wait for motion detection first
@@ -110,13 +118,14 @@ class periodic_gestures:
 
         # if we are at the beginning of a round
         if self.temporal_window_index == 0:
-            # determine the interesting regions for this round
-            self.determine_windows_to_check()
-
             # if we've filled a temporal window, then
             # run Fourier analysis on all the data we've accumulated
             if self.temporal_window_full:
                 self.identify_periodic_windows()
+
+            # determine the interesting regions for the upcoming round
+            self.determine_windows_to_check()
+
 
         # get the average pixel intensity over each
         # of the windows of interest for this round
@@ -137,6 +146,8 @@ class periodic_gestures:
         if self.motion_areas == None:
             return
 
+        # keep track of the areas we monitor
+        # so we don't track the same rectangle twice
         flagged_areas = np.zeros((self.WIDTH, self.HEIGHT))
 
         self.spatial_windows = []
@@ -179,7 +190,6 @@ class periodic_gestures:
 
         for window in self.spatial_windows:
             time_domain = np.asarray(window[1])
-            
             frequency_domain = abs(np.fft.fft(time_domain))
 
             avg = np.sum(frequency_domain[1:len(frequency_domain)/2]) / (float(len(frequency_domain)/2-1))
@@ -197,11 +207,26 @@ class periodic_gestures:
             if periodic:
                 motion_detected_windows.append(window)
 
-        # TODO: run through motion_detected_windows and publish
-        # a super-polygon that contains the bounding rectangle(s),
-        # found by k-means clustering or simple splitting clusters.
+        # run through motion_detected_windows and publish
+        # a super-polygon the represents the locations where
+        # periodic motion in the correct frequency range was found
+        super_polygon = []
+        for window in motion_detected_windows:
+            p0 = (window[0][0], window[0][1])
+            p1 = (p0[0] + self.SPATIAL_WINDOW_X, p0[1])
+            p2 = (window[0][2], window[0][3])
+            p3 = (p0[0], p0[1] + self.SPATIAL_WINDOW_Y)
 
+            super_polygon.append(Point32(p0))
+            super_polygon.append(Point32(p1))
+            super_polygon.append(Point32(p2))
+            super_polygon.append(Point32(p3))
+
+        self.gesture_pub.publish(super_polygon)
         
+        # TODO: cluster these positive rectangle somehow so we can
+        # have multiple different periodic motions detected in the
+        # same scene
 
 #-----------------------------------------------------------------
 
@@ -212,8 +237,16 @@ class periodic_gestures:
         # is full
 
         for window in self.spatial_windows:
-            subimage = self.image[window[0][1]:window[0][3]+1,window[0][2]:window[0][2]+1]
-            window[1].append(np.sum(subimage)/(self.SPATIAL_WINDOW_X*self.SPATIAL_WINDOW_Y))
+            ymin = window[0][1]
+            ymax = window[0][3]+1
+
+            xmin = window[0][0]
+            xmax = window[0][2]+1
+
+            subimage = self.image[ymin:ymax, xmin:xmax]
+            avg = np.sum(subimage) / (self.SPATIAL_WINDOW_X*self.SPATIAL_WINDOW_Y)
+
+            window[1].append(avg)
 
 #-----------------------------------------------------------------
 # END CLASS PERIODIC_GESTURES
