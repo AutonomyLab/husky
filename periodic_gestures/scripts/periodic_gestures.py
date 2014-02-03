@@ -122,26 +122,87 @@ class periodic_gestures:
 #-----------------------------------------------------------------
 
     def determine_windows_to_check(self):
-        pass
-        # TODO: run through self.motion_areas and construct a 
+        # run through self.motion_areas and construct a 
         # list of overlapping regions to check for periodicity
+
+        if self.motion_areas == None:
+            return
+
+        flagged_areas = np.zeros((self.WIDTH, self.HEIGHT))
+
+        self.spatial_windows = []
+
+        for area in self.motion_areas:
+            top_left = area[0]
+            bottom_right = area[1]
+
+            x = top_left[0]
+            y = top_left[1]
+
+            while x <= bottom_right[0] and y <= bottom_right[1]:
+                if flagged_areas[x,y] == 0:
+                    # add rectangle to regions of interest
+
+                    window = ((x,y,
+                        x+self.SPATIAL_WINDOW_X,
+                        y+SPATIAL_WINDOW_Y),
+                        [], # average pixel level over the temporal window
+                        False) # whether periodic motion was detected
+
+                    self.spatial_windows.append(window)
+
+                    flagged_areas[x,y] = 1
+
+                x += (self.SPATIAL_WINDOW_X / self.OVERLAP_FACTOR)
+                y += (self.SPATIAL_WINDOW_Y / self.OVERLAP_FACTOR)
 
 #-----------------------------------------------------------------
     
     def identify_periodic_windows(self):
-        pass
-        # TODO: run Fourier analysis over all windows we've
+        # run Fourier analysis over all windows we've
         # been accumulating data from, and publish windows that
         # contain periodicity, perhaps by clustering first
-    
+
+        if not self.TEMPORAL_WINDOW_FULL:
+            return 
+
+        motion_detected_windows = []
+
+        for window in self.spatial_windows:
+            time_domain = np.asarray(window[1])
+            
+            frequency_domain = abs(np.fft.fft(time_domain))
+
+            avg = np.sum(frequency_domain[1:len(frequency_domain)/2]) / (len(frequency_domain)/2-1)
+
+            std = np.std(frequency_domain[1:len(frequency_domain)/2])
+
+            threshold = avg + std*self.PEAK_STDEVS
+
+            periodic = False
+            for f in self.FREQ_COMPONENTS:
+                if (frequency_domain[f] >= threshold and
+                        frequency_domain[f] > frequency_domain[1]):
+                    periodic = True
+
+            if periodic:
+                motion_detected_windows.append(window)
+
+        # TODO: run through motion_detected_windows and publish
+        # a super-polygon that contains the bounding rectangle(s),
+        # found by k-means clustering or simple splitting clusters.
+
 #-----------------------------------------------------------------
 
     def average_each_subwindow(self):
-        pass
-        # TODO: get an average of the pixels in each window
+        # get an average of the pixels in each window
         # of interest that we can use at the end of the round,
         # or at each frame of the round once the temporal window
         # is full
+
+        for window in self.spatial_windows:
+            subimage = self.image[window[0][1]:window[0][3]+1,window[0][2]:window[0][2]+1]
+            window[1].append(np.sum(subimage)/(self.SPATIAL_WINDOW_X*self.SPATIAL_WINDOW_Y))
 
 #-----------------------------------------------------------------
 # END CLASS PERIODIC_GESTURES
