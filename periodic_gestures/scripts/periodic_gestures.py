@@ -118,7 +118,7 @@ class periodic_gestures:
         if self.motion_areas == None:
             return
 
-        self.HEIGHT, self.WIDTH, self.DEPTH = self.image.shape
+        self.HEIGHT, self.WIDTH = self.image.shape
 
         # if we are at the beginning of a round
         if self.temporal_window_index == 0:
