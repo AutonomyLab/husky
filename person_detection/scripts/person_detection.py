@@ -50,11 +50,11 @@ class person_detection:
     def setup_ros_node(self):
         rospy.init_node('person_detection')
 
-        rospy.Subscriber(self.image_topic, Image, self.handle_image)
-        self.cv_bridge = CvBridge()
-        
         self.people_publisher = rospy.Publisher(self.detected_people_topic, Polygon)
         self.viz_publisher = rospy.Publisher(self.visualization_topic, Image)
+
+        rospy.Subscriber(self.image_topic, Image, self.handle_image)
+        self.cv_bridge = CvBridge()
 
 #----------------------------------------------------
 

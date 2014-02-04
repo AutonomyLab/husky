@@ -40,11 +40,12 @@ class motion_detection:
 
         self.cv_bridge = CvBridge()
 
-        self.image_sub = rospy.Subscriber(rospy.get_param("~image_topic", "axis/image_raw/decompressed"), Image, self.handle_image)
-
         self.motion_pub = rospy.Publisher(rospy.get_param("~motion_topic", "motion_detection/motion"), Polygon)
 
         self.viz_pub = rospy.Publisher(rospy.get_param("~viz_topic", "motion_detection/viz"), Image)
+
+        self.image_sub = rospy.Subscriber(rospy.get_param("~image_topic", "axis/image_raw/decompressed"), Image, self.handle_image)
+
 
 #-----------------------------------------------------------------
 

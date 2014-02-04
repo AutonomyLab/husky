@@ -23,12 +23,12 @@ class periodic_gestures:
 
         self.cv_bridge = CvBridge()
 
+        self.gesture_pub = rospy.Publisher(rospy.get_param("~gesture_topic", "periodic_gestures/gestures"), Polygon)
+        self.viz_pub = rospy.Publisher(rospy.get_param("~viz_topic", "periodic_gestures/viz"), Image)
+
         rospy.Subscriber(rospy.get_param("~motion_topic", "motion_detection/motion"), Polygon, self.handle_motion)
 
         rospy.Subscriber(rospy.get_param("~image_topic", "axis/image_raw/decompressed"), Image, self.handle_image)
-
-        self.gesture_pub = rospy.Publisher(rospy.get_param("~gesture_topic", "periodic_gestures/gestures"), Polygon)
-        self.viz_pub = rospy.Publisher(rospy.get_param("~viz_topic", "periodic_gestures/viz"), Image)
 
         # window of frames over which to do Fourier analysis
         self.TEMPORAL_WINDOW = rospy.get_param("~temporal_window", 120)
