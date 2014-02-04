@@ -89,6 +89,8 @@ class periodic_gestures:
         # unpack rectangles from super-polygon
         # and set self.motion_windows to be the list of rectangles
 
+        data = data.points
+
         i = 0
         motion = []
         while i+2 < len(data):
@@ -109,6 +111,7 @@ class periodic_gestures:
             self.temporal_window_full = False
             return
 
+        self.image = np.asarray(cv.GetMat(self.image))
         self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="mono8")
 
         # wait for motion detection first

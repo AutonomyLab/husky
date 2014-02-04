@@ -53,6 +53,7 @@ class motion_detection:
             return
 
         self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="bgr8")
+        self.image = np.asarray(cv.GetMat(self.image))
         self.HEIGHT, self.WIDTH, self.DEPTH = self.image.shape
 
         # BACKGROUND SUBTRACTION

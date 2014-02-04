@@ -45,14 +45,14 @@ class people_follow:
     def handle_gesture(self, polygon):
         # TODO: polygon is a list of points, each group of 4
         # representing the bounding rectangle of a detected gesture
-        pass
+        polygon = polygon.points
 
 #----------------------------------------------------
 
     def handle_person(self, polygon):
         # TODO: polygon is a list of points, each group of 4
         # representing the bounding rectangle of a detected person
-        pass
+        polygon = polygon.points
 
 #----------------------------------------------------
     
