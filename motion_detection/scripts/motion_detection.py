@@ -6,6 +6,7 @@
 import cv, cv2, time
 import numpy as np
 import sys, os
+import rospy, roslib
 from geometry_msgs.msg import Polygon, Point32
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
