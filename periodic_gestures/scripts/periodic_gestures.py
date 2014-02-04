@@ -169,7 +169,7 @@ class periodic_gestures:
 
                     window = ((x,y,
                         x+self.SPATIAL_WINDOW_X,
-                        y+SPATIAL_WINDOW_Y),
+                        y+self.SPATIAL_WINDOW_Y),
                         [], # average pixel level over the temporal window
                         False) # whether periodic motion was detected
 
@@ -187,7 +187,7 @@ class periodic_gestures:
         # been accumulating data from, and publish windows that
         # contain periodicity, perhaps by clustering first
 
-        if not self.TEMPORAL_WINDOW_FULL:
+        if not self.temporal_window_full:
             return 
 
         motion_detected_windows = []
