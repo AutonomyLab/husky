@@ -7,4 +7,12 @@ commands.
 
 ### Parameters
 
-TODO: list the parameters for this node and their default values
+| Name              | Type      | Default               |
+| ----------------- | --------- | --------------------- |
+| `~laser_topic`  | String    | `lidar/scan`   |
+| `~potential_field_topic`   | String    | `potential_field_sum`     |
+| `~sample_rate`  | Integer    | `5`  |
+| `~min_angle`  | Float    | `-PI/2`   |
+| `~max_angle`  | Float    | `PI/2`   |
+| `~side_obstacle_force`  | Float    | `2.0`   |
+| `~front_obstacle_force`  | Float    | `8.0`   |
