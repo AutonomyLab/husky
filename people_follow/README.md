@@ -15,4 +15,8 @@ This slightly complicated convention is used in all of the image processing for 
 
 ### Parameters
 
-TODO: list the parameters for this node and their default values
+| Name              | Type      | Default               |
+| ----------------- | --------- | --------------------- |
+| `~gesture_topic`  | String    | `periodic_gestures`   |
+| `~person_topic`   | String    | `detected_people`     |
+| `~cmd_vel_topic`  | String    | `husky/plan_cmd_vel`  |
