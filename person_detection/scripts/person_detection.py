@@ -39,9 +39,7 @@ class person_detection:
 
         self.person_detection_interval = rospy.Duration(0.75)
         self.person_detection_last = rospy.Time.now()
-        self.last_detection = rospy.Time.now()
         # needs to be a Duration object
-        self.detection_timeout = rospy.Duration(config["detection_timeout"])
         self.hog = cv2.HOGDescriptor()
         self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
