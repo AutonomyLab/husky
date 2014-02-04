@@ -111,8 +111,8 @@ class periodic_gestures:
             self.temporal_window_full = False
             return
 
-        self.image = np.asarray(cv.GetMat(self.image))
         self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="mono8")
+        self.image = np.asarray(cv.GetMat(self.image))
 
         # wait for motion detection first
         if self.motion_areas == None:
