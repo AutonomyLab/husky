@@ -12,7 +12,7 @@
 # ~joy_topic                "joy"
 # ~potential_field_topic    "potential_field_sum"
 # ~cmd_vel_topic            "husky/cmd_vel"
-# ~plan_cmd_vel_topic       "plan_cmd_vel"
+# ~plan_cmd_vel_topic       "husky/plan_cmd_vel"
 
 # ~joy_vector_magnitude     1.5
 # ~drive_scale              1.0
@@ -39,7 +39,7 @@ class safe_teleop:
         joy_topic = rospy.get_param("~joy_topic", "joy")
         potential_field_topic = rospy.get_param("~potential_field_topic", "potential_field_sum")
         cmd_vel_topic = rospy.get_param("~cmd_vel_topic", "husky/cmd_vel")
-        plan_cmd_vel_topic = rospy.get_param("~plan_cmd_vel_topic", "plan_cmd_vel")
+        plan_cmd_vel_topic = rospy.get_param("~plan_cmd_vel_topic", "husky/plan_cmd_vel")
 
         rospy.Subscriber(joy_topic, Joy, self.handle_joy)
         rospy.Subscriber(potential_field_topic, Point, self.handle_potential_field)
