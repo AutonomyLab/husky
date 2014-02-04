@@ -94,8 +94,8 @@ class periodic_gestures:
         i = 0
         motion = []
         while i+2 < len(data):
-            top_left = data[i]
-            bottom_right = data[i+2]
+            top_left = (data[i].x, data[i].y)
+            bottom_right = (data[i+2].x, data[i+2].y)
             motion.append((top_left, bottom_right))
             i += 4
 
