@@ -7,7 +7,7 @@ import roslib
 roslib.load_manifest("person_detection")
 import sys, rospy, cv, cv2
 from std_msgs.msg import String
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist, Point, Point32, Polygon
 from sensor_msgs.msg import Image, LaserScan, Joy
 import numpy as np
 from cv_bridge import CvBridge, CvBridgeError
