@@ -14,5 +14,11 @@ Thus, a published polygon of 12 points (p0 p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11) w
 This slightly complicated convention is used in all of the image processing for the Husky, and it is done this way to avoid the inconvenience of defining a new ROS message that consists of a list of lists, which is not trivial.
 
 ### Parameters
+| Name              | Type      | Default               |
+| ----------------- | --------- | --------------------- |
+| `~hog_win_stride` | Integer   | `8`                   |
+| `~hog_padding`    | Integer   | `2`                   |
+| `~hog_scale`      | Float     | `1.075`               |
+| `~detected_people_topic`      | String     | `detected_people`               |
+| `~image_topic`    | String    | `axis/image_raw/decompressed`               |
 
-TODO: list the parameters for this node and their default values
