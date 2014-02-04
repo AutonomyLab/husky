@@ -165,3 +165,4 @@ class motion_detection:
 
 if __name__ == "__main__":
     detector_node = motion_detection()
+    rospy.spin()

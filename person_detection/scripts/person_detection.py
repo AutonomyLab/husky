@@ -143,3 +143,4 @@ class person_detection:
 
 if __name__ == "__main__":
     pd = person_detection()
+    rospy.spin()
