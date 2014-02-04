@@ -14,4 +14,11 @@ This slightly complicated convention is used in all of the image processing for 
 
 ### Parameters
 
-TODO: list the parameters for this node and their default values
+| Name              | Type      | Default               |
+| ----------------- | --------- | --------------------- |
+| `~motion_region_size`  | Integer    | `25`   |
+| `~motion_threshold`   | Integer    | `1`     |
+| `~hysteresis_delay`  | Integer    | `5`  |
+| `~hysteresis_decay`  | Integer    | `2`  |
+| `~image_topic`   | String    | `axis/image_raw/decompressed`     |
+| `~motion_topic`  | String    | `motion_detection`  |
