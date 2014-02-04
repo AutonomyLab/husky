@@ -19,6 +19,7 @@ This slightly complicated convention is used in all of the image processing for 
 | `~hog_win_stride` | Integer   | `8`                   |
 | `~hog_padding`    | Integer   | `2`                   |
 | `~hog_scale`      | Float     | `1.075`               |
-| `~detected_people_topic`      | String     | `detected_people`               |
+| `~detected_people_topic`      | String     | `person_detection/people`               |
+| `~visualization_topic`      | String     | `person_detection/viz` |
 | `~image_topic`    | String    | `axis/image_raw/decompressed`               |
 

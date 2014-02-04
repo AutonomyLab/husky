@@ -21,4 +21,5 @@ This slightly complicated convention is used in all of the image processing for 
 | `~hysteresis_delay`  | Integer    | `5`  |
 | `~hysteresis_decay`  | Integer    | `2`  |
 | `~image_topic`   | String    | `axis/image_raw/decompressed`     |
-| `~motion_topic`  | String    | `motion_detection`  |
+| `~motion_topic`  | String    | `motion_detection/motion`  |
+| `~viz_topic`  | String    | `motion_detection/viz`  |

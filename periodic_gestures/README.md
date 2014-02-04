@@ -17,9 +17,10 @@ This slightly complicated convention is used in all of the image processing for 
 
 | Name              | Type      | Default               |
 | ----------------- | --------- | --------------------- |
-| `~gesture_topic`  | String    | `periodic_gestures`   |
+| `~gesture_topic`  | String    | `periodic_gestures/gestures`   |
 | `~image_topic`   | String    | `axis/image_raw/decompressed`     |
-| `~motion_topic`  | String    | `motion_detection`  |
+| `~motion_topic`  | String    | `motion_detection/motion`  |
+| `~viz_topic`  | String    | `periodic_gestures/viz`  |
 | `~temporal_window`  | Integer    | `120`  |
 | `~min_gesture_freq`  | Float    | `0.5`   |
 | `~max_gesture_freq`  | Float    | `2.0`   |

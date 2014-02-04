@@ -23,11 +23,12 @@ class periodic_gestures:
 
         self.cv_bridge = CvBridge()
 
-        rospy.Subscriber(rospy.get_param("~motion_topic", "motion_detection"), Polygon, self.handle_motion)
+        rospy.Subscriber(rospy.get_param("~motion_topic", "motion_detection/motion"), Polygon, self.handle_motion)
 
         rospy.Subscriber(rospy.get_param("~image_topic", "axis/image_raw/decompressed"), Image, self.handle_image)
 
-        self.gesture_pub = rospy.Publisher(rospy.get_param("~gesture_topic", "periodic_gestures"), Polygon)
+        self.gesture_pub = rospy.Publisher(rospy.get_param("~gesture_topic", "periodic_gestures/gestures"), Polygon)
+        self.viz_pub = rospy.Publisher(rospy.get_param("~viz_topic", "periodic_gestures/viz"), Image)
 
         # window of frames over which to do Fourier analysis
         self.TEMPORAL_WINDOW = rospy.get_param("~temporal_window", 120)
@@ -223,10 +224,22 @@ class periodic_gestures:
             super_polygon.append(Point32(p3))
 
         self.gesture_pub.publish(super_polygon)
+
+        if self.viz_pub.get_num_connections() > 0:
+            self.publish_viz(motion_detected_windows, self.image)
         
         # TODO: cluster these positive rectangle somehow so we can
         # have multiple different periodic motions detected in the
         # same scene
+
+#-----------------------------------------------------------------
+
+    def publish_viz(self, rectangles, img):
+        for rect in rectangles:
+            cv2.rectangle(img, rect[0][0], rect[0][2], (255, 255, 255))
+
+        msg = cv_bridge.cv_to_imgmsg(img)
+        self.viz_pub.publish(msg)
 
 #-----------------------------------------------------------------
 

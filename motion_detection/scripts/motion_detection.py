@@ -41,7 +41,9 @@ class motion_detection:
 
         self.image_sub = rospy.Subscriber(rospy.get_param("~image_topic", "axis/image_raw/decompressed"), Image, self.handle_image)
 
-        self.motion_pub = rospy.Publisher(rospy.get_param("~motion_topic", "motion_detection"), Polygon)
+        self.motion_pub = rospy.Publisher(rospy.get_param("~motion_topic", "motion_detection/motion"), Polygon)
+
+        self.viz_pub = rospy.Publisher(rospy.get_param("~viz_topic", "motion_detection/viz"), Image)
 
 #-----------------------------------------------------------------
 
@@ -70,6 +72,18 @@ class motion_detection:
             super_polygon.append(Point32((rect[3][0], rect[3][1], 0)))
 
         self.motion_pub.publish(Polygon(super_polygon))
+
+        if self.viz_pub.get_num_connections() > 0:
+            self.publish_viz(rectangles, self.image)
+
+#-----------------------------------------------------------------
+
+    def publish_viz(self, rectangles, img):
+        for rect in rectangles:
+            cv2.rectangle(img, rect[0], rect[2], (255, 255, 255))
+
+        msg = self.cv_bridge.cv_to_imgmsg(img)
+        self.viz_pub.publish(msg)
 
 #-----------------------------------------------------------------
     

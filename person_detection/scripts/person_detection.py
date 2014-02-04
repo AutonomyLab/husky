@@ -28,8 +28,9 @@ class person_detection:
             camera_resolution_y = 480,
             image_encoding = "bgr8",
             debug = False,
-            detected_people_topic = rospy.get_param("~detected_people_topic", "detected_people"),
-            image_topic = rospy.get_param("~image_topic", "axis/image_raw/decompressed"))
+            detected_people_topic = rospy.get_param("~detected_people_topic", "person_detection/people"),
+            image_topic = rospy.get_param("~image_topic", "axis/image_raw/decompressed"),
+            visualization_topic = rospy.get_param("~visualization_topic", "person_detection/viz"))
 
         # load object properties from config dict
         self.__dict__.update(config)
@@ -50,9 +51,10 @@ class person_detection:
         rospy.init_node('person_detection')
 
         rospy.Subscriber(self.image_topic, Image, self.handle_image)
-        self.bridge = CvBridge()
+        self.cv_bridge = CvBridge()
         
         self.people_publisher = rospy.Publisher(self.detected_people_topic, Polygon)
+        self.viz_publisher = rospy.Publisher(self.visualization_topic, Image)
 
 #----------------------------------------------------
 
@@ -82,11 +84,23 @@ class person_detection:
             super_polygon.append(Point32((rect[3][0], rect[3][1], 0)))
 
         self.people_publisher.publish(Polygon(super_polygon))
+
+        if self.viz_publisher.get_num_connections() > 0:
+            self.publish_viz(rectangles, cv2_image)
         
         elapsed = rospy.Time.now() - begin_processing
         # adjust frame processing rate to match detector rate,
         # plus a small margin
         self.person_detection_interval = rospy.Duration(elapsed.to_sec() + 0.1)
+
+#----------------------------------------------------
+
+    def publish_viz(self, rectangles, img):
+        for rect in rectangles:
+            cv2.rectangle(img, rect[0], rect[2], (255, 255, 255))
+
+        msg = cv_bridge.cv_to_imgmsg(img)
+        self.viz_publisher.publish(msg)
 
 #----------------------------------------------------
 
@@ -112,7 +126,7 @@ class person_detection:
 
     def ros_msg_to_cv2(self, ros_msg):
         try:
-            cv_image = self.bridge.imgmsg_to_cv(ros_msg, desired_encoding=self.image_encoding)
+            cv_image = self.cv_bridge.imgmsg_to_cv(ros_msg, desired_encoding=self.image_encoding)
         except CvBridgeError, e:
             print e
 
