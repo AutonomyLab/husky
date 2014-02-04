@@ -241,6 +241,7 @@ class periodic_gestures:
         for rect in rectangles:
             cv2.rectangle(img, rect[0][0], rect[0][2], (255, 255, 255))
 
+        img = cv.fromarray(img)
         msg = cv_bridge.cv_to_imgmsg(img)
         self.viz_pub.publish(msg)
 

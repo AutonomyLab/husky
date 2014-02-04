@@ -104,6 +104,7 @@ class person_detection:
         for rect in rectangles:
             cv2.rectangle(img, rect[0], rect[2], (255, 255, 255))
 
+        img = cv.fromarray(img)
         msg = cv_bridge.cv_to_imgmsg(img)
         self.viz_publisher.publish(msg)
 
