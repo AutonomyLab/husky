@@ -15,4 +15,17 @@ This slightly complicated convention is used in all of the image processing for 
 
 ### Parameters
 
-TODO: list the parameters for this node and their default values
+| Name              | Type      | Default               |
+| ----------------- | --------- | --------------------- |
+| `~gesture_topic`  | String    | `periodic_gestures`   |
+| `~image_topic`   | String    | `axis/image_raw/decompressed`     |
+| `~motion_topic`  | String    | `motion_detection`  |
+| `~temporal_window`  | Integer    | `120`  |
+| `~min_gesture_freq`  | Float    | `0.5`   |
+| `~max_gesture_freq`  | Float    | `2.0`   |
+| `~camera_framerate`  | Integer    | `30`  |
+| `~peak_sensitivity`  | Float    | `9.0`   |
+| `~min_peak`   | Float    | `50.0`     |
+| `~spatial_window_x`  | Integer    | `10`  |
+| `~spatial_window_y`  | Integer    | `10`  |
+| `~overlap_factor`   | Float    | `2.0`     |
