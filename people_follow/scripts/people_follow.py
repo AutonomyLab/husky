@@ -27,8 +27,6 @@ class people_follow:
         # load object properties from config dict
         self.__dict__.update(config)
 
-        self.autonomy_enabled = False
-
 #----------------------------------------------------
 
     def setup_ros_node(self, config):
@@ -92,17 +90,15 @@ class people_follow:
 
 if __name__ == "__main__":
     config = dict(
-        max_person_size = 1.0,
-        turning_rate = 0.5,
-        max_speed = 0.95,
-        min_linear_speed = 0.1,
-        min_angular_speed = 0.1,
-        control_rate = 30,
-        detection_timeout = 3.0,
+        min_linear_speed = rospy.get_param("~min_linear_speed", 0.1),
+        max_linear_speed = rospy.get_param("~max_linear_speed", 0.95),
+        min_angular_speed = rospy.get_param("~min_angular_speed", 0.1),
+        max_angular_speed = rospy.get_param("~max_angular_speed", 0.95),
+        control_rate = rospy.get_param("~control_rate", 30),
+        detection_timeout = rospy.get_param("~detected_person_timeout", 3),
         gesture_topic = rospy.get_param("~gesture_topic", "periodic_gestures"),
         person_topic = rospy.get_param("~person_topic", "detected_people"),
-        vel_topic = rospy.get_param("~cmd_vel_topic", "husky/plan_cmd_vel"),
-        debug = False)
+        vel_topic = rospy.get_param("~cmd_vel_topic", "husky/plan_cmd_vel"))
 
     pf = people_follow(config)
     pf.control_loop()
