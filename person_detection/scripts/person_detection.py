@@ -83,10 +83,10 @@ class person_detection:
         # publish super_polygon
         super_polygon = []
         for rect in rectangles:
-            super_polygon.append(Point32((rect[0][0], rect[0][1], 0)))
-            super_polygon.append(Point32((rect[1][0], rect[1][1], 0)))
-            super_polygon.append(Point32((rect[2][0], rect[2][1], 0)))
-            super_polygon.append(Point32((rect[3][0], rect[3][1], 0)))
+            super_polygon.append(Point32(x=rect[0][0], y=rect[0][1], z=0))
+            super_polygon.append(Point32(x=rect[1][0], y=rect[1][1], z=0))
+            super_polygon.append(Point32(x=rect[2][0], y=rect[2][1], z=0))
+            super_polygon.append(Point32(x=rect[3][0], y=rect[3][1], z=0))
 
         self.people_publisher.publish(Polygon(super_polygon))
 

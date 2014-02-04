@@ -221,10 +221,10 @@ class periodic_gestures:
             p2 = (window[0][2], window[0][3])
             p3 = (p0[0], p0[1] + self.SPATIAL_WINDOW_Y)
 
-            super_polygon.append(Point32(p0))
-            super_polygon.append(Point32(p1))
-            super_polygon.append(Point32(p2))
-            super_polygon.append(Point32(p3))
+            super_polygon.append(Point32(x=p0[0], y=p0[1], z=0))
+            super_polygon.append(Point32(x=p1[0], y=p1[1], z=0))
+            super_polygon.append(Point32(x=p2[0], y=p2[1], z=0))
+            super_polygon.append(Point32(x=p3[0], y=p3[1], z=0))
 
         self.gesture_pub.publish(super_polygon)
 
