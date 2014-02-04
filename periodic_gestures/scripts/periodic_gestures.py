@@ -104,7 +104,7 @@ class periodic_gestures:
 #-----------------------------------------------------------------
 
     def handle_image(self, data):
-        if self.gesture_pub.get_num_connections() < 1:
+        if self.no_one_listening():
             # reset detection process so we start from
             # scratch once someone subscribes
             self.temporal_window_index = 0
@@ -243,6 +243,12 @@ class periodic_gestures:
 
         msg = cv_bridge.cv_to_imgmsg(img)
         self.viz_pub.publish(msg)
+
+#-----------------------------------------------------------------
+
+    def no_one_listening(self):
+        return (self.gesture_pub.get_num_connections() > 1 and
+                self.viz_pub.get_num_connections() > 1)
 
 #-----------------------------------------------------------------
 

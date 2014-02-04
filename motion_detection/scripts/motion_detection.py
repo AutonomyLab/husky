@@ -49,7 +49,7 @@ class motion_detection:
 #-----------------------------------------------------------------
 
     def handle_image(self, data):
-        if self.motion_pub.get_num_connections() < 1:
+        if self.no_one_listening():
             return
 
         self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="bgr8")
@@ -77,6 +77,12 @@ class motion_detection:
 
         if self.viz_pub.get_num_connections() > 0:
             self.publish_viz(rectangles, self.image)
+
+#-----------------------------------------------------------------
+
+    def no_one_listening(self):
+        return (self.motion_pub.get_num_connections() < 1 and 
+                self.viz_pub.get_num_connections() < 1)
 
 #-----------------------------------------------------------------
 

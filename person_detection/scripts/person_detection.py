@@ -58,9 +58,14 @@ class person_detection:
 
 #----------------------------------------------------
 
+    def no_one_listening(self):
+        return (self.people_publisher.get_num_connections() < 1 and
+                self.viz_publisher.get_num_connections() < 1)
+
+#----------------------------------------------------
+
     def handle_image(self, data):
-        # don't waste processing time if no one is listening
-        if self.people_publisher.get_num_connections() < 1:
+        if self.no_one_listening():
             return
 
         if rospy.Time.now() - self.person_detection_last < self.person_detection_interval:
