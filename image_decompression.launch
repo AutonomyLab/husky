@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="image_transport" name="image_decompression" type="republish" args="compressed in:=/axis/image_raw out:=/axis/image_raw/decompressed">
+    </node>
+</launch>
+
