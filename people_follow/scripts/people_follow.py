@@ -24,6 +24,9 @@ class people_follow:
 
         self.target = None
 
+        self.gestures = []
+        self.people = []
+
         # load object properties from config dict
         self.__dict__.update(config)
 
@@ -43,16 +46,33 @@ class people_follow:
 #----------------------------------------------------
 
     def handle_gesture(self, polygon):
-        # TODO: polygon is a list of points, each group of 4
-        # representing the bounding rectangle of a detected gesture
-        polygon = polygon.points
+        rects = self.unpack_polygon(polygon.points)
+        self.gestures = rects
+
+        # TODO: do something based on this detected gesture
 
 #----------------------------------------------------
 
     def handle_person(self, polygon):
-        # TODO: polygon is a list of points, each group of 4
-        # representing the bounding rectangle of a detected person
-        polygon = polygon.points
+        rects = self.unpack_polygon(polygon.points)
+        self.people = rects
+
+        # TODO: do something based on this detected person
+
+#----------------------------------------------------
+
+    def unpack_polygon(self, polygon):
+        rectangles = []
+        i = 0
+        while i+2 < len(polygon):
+            p0 = (polygon[i].x, polygon[i].y)
+            p1 = (polygon[i+1].x, polygon[i+1].y)
+            p2 = (polygon[i+2].x, polygon[i+2].y)
+            p3 = (polygon[i+3].x, polygon[i+3].y)
+
+            rectangles.append((p0,p1,p2,p3))
+
+            i += 4
 
 #----------------------------------------------------
     
