@@ -231,7 +231,7 @@ class periodic_gestures:
         if self.viz_pub.get_num_connections() > 0:
             self.publish_viz(motion_detected_windows, self.image)
         
-        # TODO: cluster these positive rectangle somehow so we can
+        # TODO: cluster these positive rectangles somehow so we can
         # have multiple different periodic motions detected in the
         # same scene
 
@@ -242,7 +242,7 @@ class periodic_gestures:
             cv2.rectangle(img, rect[0][0], rect[0][2], (255, 255, 255))
 
         img = cv.fromarray(img)
-        msg = self.cv_bridge.cv_to_imgmsg(img)
+        msg = self.cv_bridge.cv_to_imgmsg(img, encoding="bgr8")
         self.viz_pub.publish(msg)
 
 #-----------------------------------------------------------------

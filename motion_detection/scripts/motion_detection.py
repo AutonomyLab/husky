@@ -92,7 +92,7 @@ class motion_detection:
             cv2.rectangle(img, rect[0], rect[2], (255, 255, 255))
 
         img = cv.fromarray(img)
-        msg = self.cv_bridge.cv_to_imgmsg(img)
+        msg = self.cv_bridge.cv_to_imgmsg(img, encoding="bgr8")
         self.viz_pub.publish(msg)
 
 #-----------------------------------------------------------------
