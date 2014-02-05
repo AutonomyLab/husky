@@ -71,6 +71,8 @@ class safe_teleop:
         self.override = False
         self.planned_motion = False
 
+        self.planned_motion_time = rospy.Time.now()
+
         self.planner_cmd = Twist()
 
 #-------------------------------------------------
@@ -78,6 +80,9 @@ class safe_teleop:
     def start(self):
         rate = rospy.Rate(rospy.get_param("~cmd_rate", 10))
         while not rospy.is_shutdown():
+            # expire old planner commands
+            if rospy.Time.now() - self.planned_motion_time > 0.1:
+                self.planner_cmd = Twist()
             cmd = self.compute_motion_cmd()
             if cmd != None:
                 self.cmd_pub.publish(cmd)
@@ -187,6 +192,7 @@ class safe_teleop:
 
     def handle_plan(self, data):
         self.planner_cmd = data
+        self.planned_motion_time = rospy.Time.now()
 
 #-------------------------------------------------
 
