@@ -110,14 +110,14 @@ class safe_teleop:
             # safe motion.
 
             cmd_vector = np.asarray([cmd.linear.x, -cmd.angular.z])
-            cmd_vector /= np.linalg.norm(cmd_vector)
+            cmd_vector /= np.linalg.norm(cmd_vector)+0.01
             cmd_vector *= self.magnitude
 
             vector_sum = cmd_vector + self.obstacle_vector
             vector_sum /= np.linalg.norm(vector_sum)
 
             # we can't see backward, so restrict backward motion
-            if joy_cmd_vector[0] >= 0:
+            if cmd_vector[0] >= 0:
                 vector_sum[0] = max(0, vector_sum[0])
             else:
                 vector_sum[0] = max(-self.safe_reverse_speed, vector_sum[0])
