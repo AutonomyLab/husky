@@ -8,7 +8,7 @@ import roslib
 roslib.load_manifest("people_follow")
 import sys, rospy, cv, cv2
 from std_msgs.msg import String
-from geometry_msgs.msg import Twist, Point
+from geometry_msgs.msg import Twist, Point, Point32, Polygon
 from sensor_msgs.msg import Image, LaserScan, Joy
 import numpy as np
 from cv_bridge import CvBridge, CvBridgeError
@@ -20,27 +20,20 @@ import atexit
 
 class people_follow:
     def __init__(self, config):
-        self.setup_ros_node(config)
-
+        # load object properties from config dict
+        self.__dict__.update(config)
+        self.setup_ros_node()
         self.target = None
-
         self.gestures = []
         self.people = []
 
-        # load object properties from config dict
-        self.__dict__.update(config)
-
 #----------------------------------------------------
 
-    def setup_ros_node(self, config):
+    def setup_ros_node(self):
         rospy.init_node('people_follow')
-        #self.republisher = subprocess.Popen("rosrun image_transport republish compressed in:=/axis/image_raw raw out:=/axis/image_raw/decompressed", shell=True)
-
-        self.control_pub = rospy.Publisher(config.vel_topic, Twist)
-        
-        self.periodic_sub = rospy.Subscriber(config.gesture_topic, Polygon, self.handle_gesture)
-        self.person_sub = rospy.Subscriber(config.person_topic, Polygon, self.handle_person)
-
+        self.control_pub = rospy.Publisher(self.vel_topic, Twist)
+        self.periodic_sub = rospy.Subscriber(self.gesture_topic, Polygon, self.handle_gesture)
+        self.person_sub = rospy.Subscriber(self.person_topic, Polygon, self.handle_person)
         self.bridge = CvBridge()
 
 #----------------------------------------------------
