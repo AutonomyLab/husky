@@ -26,3 +26,5 @@ This slightly complicated convention is used in all of the image processing for 
 | `~max_angular_speed` | Float | `0.95` |
 | `~control_rate` | Integer | `0.1` |
 | `~detected_person_timeout` | Integer | `0.1` |
+| `~frame_width` | Integer | `640` |
+| `~frame_height` | Integer | `480` |

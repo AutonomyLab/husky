@@ -32,36 +32,68 @@ class people_follow:
     def setup_ros_node(self):
         rospy.init_node('people_follow')
         self.control_pub = rospy.Publisher(self.vel_topic, Twist)
-        self.periodic_sub = rospy.Subscriber(self.gesture_topic, Polygon, self.handle_gesture)
-        self.person_sub = rospy.Subscriber(self.person_topic, Polygon, self.handle_person)
+        self.subscribe_node("gestures")
+        self.subscribe_node("people")
         self.bridge = CvBridge()
 
 #----------------------------------------------------
 
-    def handle_gesture(self, polygon):
-        rects = self.unpack_polygon(polygon.points)
-        self.gestures = rects
-
-        # TODO: do something based on this detected gesture
+    def unsubscribe_node(self, target):
+        if target == "gestures":
+            self.periodic_sub.unregister()
+            self.peridic_sub = None
+        elif target == "people":
+            self.person_sub.unregister()
+            self.person_sub = None
 
 #----------------------------------------------------
 
-    def handle_person(self, polygon):
+    def subscribe_node(self, target):
+        if target == "gestures":
+            self.periodic_sub = rospy.Subscriber(self.gesture_topic, Polygon, self.handle_gestures)
+        elif target == "people":
+            self.person_sub = rospy.Subscriber(self.person_topic, Polygon, self.handle_people)
+
+#----------------------------------------------------
+    
+    def toggle_node(self, target):
+        if target == "gestures":
+            if self.periodic_sub == None:
+                self.subscribe(target)
+            else
+                self.unsubscribe(target)
+        elif target == "people":
+            if self.person_sub == None:
+                self.subscribe(target)
+            else
+                self.unsubscribe(target)
+
+#----------------------------------------------------
+
+    def handle_gestures(self, polygon):
+        rects = self.unpack_polygon(polygon.points)
+        self.gestures = rects
+
+#----------------------------------------------------
+
+    def handle_people(self, polygon):
         rects = self.unpack_polygon(polygon.points)
         self.people = rects
-
-        # TODO: do something based on this detected person
 
 #----------------------------------------------------
 
     def unpack_polygon(self, polygon):
+        # for normalizing the objects' positions
+        w = float(self.frame_width)
+        h = float(self.frame_height)
+
         rectangles = []
         i = 0
         while i+2 < len(polygon):
-            p0 = (polygon[i].x, polygon[i].y)
-            p1 = (polygon[i+1].x, polygon[i+1].y)
-            p2 = (polygon[i+2].x, polygon[i+2].y)
-            p3 = (polygon[i+3].x, polygon[i+3].y)
+            p0 = (polygon[i].x/w, polygon[i].y/h)
+            p1 = (polygon[i+1].x/w, polygon[i+1].y/h)
+            p2 = (polygon[i+2].x/w, polygon[i+2].y/h)
+            p3 = (polygon[i+3].x/w, polygon[i+3].y/h)
 
             rectangles.append((p0,p1,p2,p3))
 
@@ -79,17 +111,73 @@ class people_follow:
 
 #----------------------------------------------------
 
-    def calculate_speed(self):
-        return (0,0)
-        # TODO: compute speed based on behavioral goals
+    def compute_vel(self):
+        self.target = None
+
+        if len(self.people) > 0:
+            # find the person closest to the center
+            best_distance = sys.maxint
+            best_person = None
+            for person in self.people:
+                dist = abs((person[0][0]+person[1][0])/2 - 0.5)
+                if dist < best_distance:
+                    best_distance = dist
+                    best_person = person
+
+            self.target = (best_person[0][0]+best_person[1][0]) / 2
+
+        elif len(self.gestures) > 0:
+            alpha = 1
+            beta = 0.01
+
+            best_score = 0
+            best_gesture = None
+            for gesture in self.gestures:
+                dist = abs((gesture[0][0]+gesture[1][0])/2 - 0.5)
+                area = (gesture[1][0]-gesture[0][0])*(gesture[2][1]-gesture[1][1])
+                score = alpha*dist + beta*area
+
+                if score > best_score:
+                    best_gesture = gesture
+
+            self.target = (best_gesture[0][0]+best_gesture[1][0]) / 2
+
+        if self.target == None:
+            return (0,0)
+        else:
+            linear = -2*self.target + 1
+            angular = 0.5 - self.target)*2
+            
+            return self.clip_velocity(linear, angular)           
+
+#----------------------------------------------------
+
+    def clip_velocity(self, linear, angular):
+        if abs(linear) < self.min_linear_speed:
+            linear = 0
+        if abs(angular) < self.min_angular_speed:
+            angular = 0
+
+        if linear < -self.min_linear_speed:
+            linear = -self.min_linear_speed
+        elif linear > self.max_linear_speed:
+            linear = self.max_linear_speed
+
+        if angular < -self.min_angular_speed:
+            angular = -self.min_angular_speed
+        elif angular > self.max_angular_speed:
+            angular = self.max_angular_speed
+
+        return (linear, angular)
 
 #----------------------------------------------------
     
     def control_loop(self):
         rate = rospy.Rate(self.control_rate)
         while not rospy.is_shutdown():
-            forward_amount, turn_amount = self.calculate_speed()
-            self.publish_move(forward_amount, turn_amount)
+            forward_amount, turn_amount = self.compute_vel()
+            if forward_amount != 0 or turn_amount != 0:
+                self.publish_move(forward_amount, turn_amount)
             
             rate.sleep()
 
@@ -109,6 +197,8 @@ class people_follow:
 
 if __name__ == "__main__":
     config = dict(
+        frame_width = rospy.get_param("~frame_width", 640),
+        frame_height = rospy.get_param("~frame_height", 480),
         min_linear_speed = rospy.get_param("~min_linear_speed", 0.1),
         max_linear_speed = rospy.get_param("~max_linear_speed", 0.95),
         min_angular_speed = rospy.get_param("~min_angular_speed", 0.1),
