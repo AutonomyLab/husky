@@ -19,3 +19,7 @@ obstacles.
 | `~deadman_button`   | Integer    | `0`     |
 | `~planner_button`   | Integer    | `3`     |
 | `~cmd_rate`   | Integer    | `10`     |
+| `~min_linear` | Float | `0.1` |
+| `~max_linear` | Float | `0.95` |
+| `~min_angular` | Float | `0.1` |
+| `~max_angular` | Float | `0.95` |
