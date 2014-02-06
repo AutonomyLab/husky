@@ -33,10 +33,10 @@ class motion_detection:
         self.MOTION_THRESHOLD = rospy.get_param("~motion_threshold", 1)
 
         # how long to require motion to stick around
-        self.MIN_HYSTERESIS_FRAMES = rospy.get_param("~hysteresis_delay", 5)
+        self.MIN_HYSTERESIS_FRAMES = rospy.get_param("~hysteresis_delay", 2)
 
         # how quickly to decay non-persistent cells
-        self.DECAY_RATE = rospy.get_param("~hysteresis_decay", 2)
+        self.DECAY_RATE = rospy.get_param("~hysteresis_decay", 1)
 
         self.cv_bridge = CvBridge()
 
