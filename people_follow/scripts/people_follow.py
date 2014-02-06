@@ -78,6 +78,12 @@ class people_follow:
         self.control_pub.publish(command)
 
 #----------------------------------------------------
+
+    def calculate_speed(self):
+        return (0,0)
+        # TODO: compute speed based on behavioral goals
+
+#----------------------------------------------------
     
     def control_loop(self):
         rate = rospy.Rate(self.control_rate)
