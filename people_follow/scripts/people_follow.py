@@ -151,27 +151,7 @@ class people_follow:
             linear = -2*self.target + 1
             angular = 0.5 - self.target*2
             
-            return self.clip_velocity(linear, angular)           
-
-#----------------------------------------------------
-
-    def clip_velocity(self, linear, angular):
-        if abs(linear) < self.min_linear_speed:
-            linear = 0
-        if abs(angular) < self.min_angular_speed:
-            angular = 0
-
-        if linear < -self.min_linear_speed:
-            linear = -self.min_linear_speed
-        elif linear > self.max_linear_speed:
-            linear = self.max_linear_speed
-
-        if angular < -self.min_angular_speed:
-            angular = -self.min_angular_speed
-        elif angular > self.max_angular_speed:
-            angular = self.max_angular_speed
-
-        return (linear, angular)
+            return (linear, angular)           
 
 #----------------------------------------------------
     

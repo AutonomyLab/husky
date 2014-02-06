@@ -20,10 +20,6 @@ This slightly complicated convention is used in all of the image processing for 
 | `~gesture_topic`  | String    | `periodic_gestures`   |
 | `~person_topic`   | String    | `detected_people`     |
 | `~cmd_vel_topic`  | String    | `husky/plan_cmd_vel`  |
-| `~min_linear_speed` | Float | `0.1` |
-| `~max_linear_speed` | Float | `0.95` |
-| `~min_angular_speed` | Float | `0.1` |
-| `~max_angular_speed` | Float | `0.95` |
 | `~control_rate` | Integer | `0.1` |
 | `~detected_person_timeout` | Integer | `0.1` |
 | `~frame_width` | Integer | `640` |
