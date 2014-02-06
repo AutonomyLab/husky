@@ -81,7 +81,7 @@ class safe_teleop:
         rate = rospy.Rate(rospy.get_param("~cmd_rate", 10))
         while not rospy.is_shutdown():
             # expire old planner commands
-            if rospy.Time.now() - self.planned_motion_time > 0.1:
+            if rospy.Time.now()-self.planned_motion_time > rospy.Duration(0.1):
                 self.planner_cmd = Twist()
             cmd = self.compute_motion_cmd()
             if cmd != None:
