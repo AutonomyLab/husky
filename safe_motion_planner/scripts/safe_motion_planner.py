@@ -50,6 +50,11 @@ class safe_teleop:
         self.obstacle_vector = None
         self.joy_vector = None
 
+        self.min_linear = rospy.get_param("~min_linear_vel", 0.1)
+        self.max_linear = rospy.get_param("~max_linear_vel", 0.95)
+        self.min_angular = rospy.get_param("~min_angular_vel", 0.1)
+        self.max_angular = rospy.get_param("~max_angular_vel", 0.95)
+
         self.magnitude = rospy.get_param("~joy_vector_magnitude", 1.5)
         self.drive_scale = rospy.get_param("~drive_scale", 1)
         self.turn_scale = rospy.get_param("~turn_scale", 1)
@@ -160,6 +165,33 @@ class safe_teleop:
             cmd = Twist()
             cmd.linear.x = vector_sum[0] * self.drive_scale
             cmd.angular.z = vector_sum[1] * -self.turn_scale
+
+        return self.clip_velocity(cmd)
+
+#-------------------------------------------------
+
+    def clip_velocity(self, cmd):
+        x = cmd.linear.x
+        w = cmd.angular.z
+
+        if abs(x) < self.min_linear:
+            x = 0
+        if abs(w) < self.min_angular:
+            w = 0
+
+        if x < -self.min_linear:
+            x = -self.min_linear
+        elif x > self.max_linear:
+            x = self.max_linear
+        
+        if w < -self.min_angular:
+            w = -self.min_angular
+        elif w > self.max_angular:
+            w = self.max_angular
+
+        cmd.linear.x = x
+        cmd.angular.z = w
+
         return cmd
 
 #-------------------------------------------------
