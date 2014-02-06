@@ -31,7 +31,7 @@ class periodic_gestures:
         rospy.Subscriber(rospy.get_param("~image_topic", "axis/image_raw/decompressed"), Image, self.handle_image)
 
         # window of frames over which to do Fourier analysis
-        self.TEMPORAL_WINDOW = rospy.get_param("~temporal_window", 120)
+        self.TEMPORAL_WINDOW = rospy.get_param("~temporal_window", 60)
         # self.FREQ_COMPONENTS = [3,4,5,6,7]
 
         self.MIN_GESTURE_FREQUENCY = rospy.get_param("~min_gesture_freq", 0.5)
@@ -52,10 +52,10 @@ class periodic_gestures:
 
         # how picky are we about what constitutes a significant
         # peak in the frequency domain
-        self.PEAK_STDEVS = rospy.get_param("~peak_sensitivity", 9)
+        self.PEAK_STDEVS = rospy.get_param("~peak_sensitivity", 7)
 
         # peaks must be at least this high to qualify
-        self.MIN_FREQ_INTENSITY = rospy.get_param("~min_peak", 50)
+        self.MIN_FREQ_INTENSITY = rospy.get_param("~min_peak", 40)
 
         # size of the overlapping subregion windows
         self.SPATIAL_WINDOW_X = rospy.get_param("~spatial_window_x", 10)
