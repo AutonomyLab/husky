@@ -22,6 +22,7 @@ class people_follow:
     def __init__(self, config):
         # load object properties from config dict
         self.__dict__.update(config)
+        self.detection_timeout = rospy.Duration(self.detection_timeout)
         self.setup_ros_node()
         self.target = None
         self.gestures = []
@@ -112,8 +113,6 @@ class people_follow:
 #----------------------------------------------------
 
     def compute_vel(self):
-        self.target = None
-
         if len(self.people) > 0:
             # find the person closest to the center
             best_distance = sys.maxint
@@ -141,6 +140,9 @@ class people_follow:
                     best_gesture = gesture
 
             self.target = (best_gesture[0][0]+best_gesture[1][0]) / 2
+
+        elif rospy.Time.now() - self.last_detection > self.detection_timeout:
+            self.target = None
 
         if self.target == None:
             return (0,0)
