@@ -25,6 +25,7 @@ class people_follow:
         self.detection_timeout = rospy.Duration(self.detection_timeout)
         self.setup_ros_node()
         self.target = None
+        self.last_detection = rospy.Time.now()
         self.gestures = []
         self.people = []
 
@@ -61,12 +62,12 @@ class people_follow:
         if target == "gestures":
             if self.periodic_sub == None:
                 self.subscribe(target)
-            else
+            else:
                 self.unsubscribe(target)
         elif target == "people":
             if self.person_sub == None:
                 self.subscribe(target)
-            else
+            else:
                 self.unsubscribe(target)
 
 #----------------------------------------------------
@@ -148,7 +149,7 @@ class people_follow:
             return (0,0)
         else:
             linear = -2*self.target + 1
-            angular = 0.5 - self.target)*2
+            angular = 0.5 - self.target*2
             
             return self.clip_velocity(linear, angular)           
 
