@@ -72,14 +72,12 @@ class people_follow:
 #----------------------------------------------------
 
     def handle_gestures(self, polygon):
-        rects = self.unpack_polygon(polygon.points)
-        self.gestures = rects
+        self.gestures = self.unpack_polygon(polygon.points)
 
 #----------------------------------------------------
 
     def handle_people(self, polygon):
-        rects = self.unpack_polygon(polygon.points)
-        self.people = rects
+        self.people = self.unpack_polygon(polygon.points)
 
 #----------------------------------------------------
 
