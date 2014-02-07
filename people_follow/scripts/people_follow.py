@@ -98,6 +98,8 @@ class people_follow:
 
             i += 4
 
+        return rectangles
+
 #----------------------------------------------------
     
     def publish_move(self, forward, turn):
