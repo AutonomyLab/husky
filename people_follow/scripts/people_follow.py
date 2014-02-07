@@ -146,9 +146,12 @@ class people_follow:
         if self.target == None:
             return (0,0)
         else:
-            linear = -2*self.target + 1
-            angular = 0.5 - self.target*2
+            linear = 1 - 2*abs(self.target-0.5)
+            angular = -2*self.target + 1
             
+            linear *= self.DRIVE_RATE
+            angular *= self.TURN_RATE
+
             return (linear, angular)           
 
 #----------------------------------------------------
@@ -181,6 +184,8 @@ if __name__ == "__main__":
         frame_width = rospy.get_param("~frame_width", 640),
         frame_height = rospy.get_param("~frame_height", 480),
         control_rate = rospy.get_param("~control_rate", 30),
+        drive_rate = rospy.get_param("~drive_rate", 1.0),
+        turn_rate = rospy.get_param("~turn_rate", 0.5),
         detection_timeout = rospy.get_param("~detected_person_timeout", 3),
         gesture_topic = rospy.get_param("~gesture_topic", "periodic_gestures/gestures"),
         person_topic = rospy.get_param("~person_topic", "person_detection/people"),
