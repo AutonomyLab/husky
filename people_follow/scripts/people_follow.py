@@ -105,10 +105,8 @@ class people_follow:
     
     def publish_move(self, forward, turn):
         command = Twist()
-        if abs(forward) > self.min_linear_speed:
-            command.linear.x = forward
-        if abs(turn) > self.min_angular_speed:
-            command.angular.z = turn
+        command.linear.x = forward
+        command.angular.z = turn
         self.control_pub.publish(command)
 
 #----------------------------------------------------
@@ -182,14 +180,10 @@ if __name__ == "__main__":
     config = dict(
         frame_width = rospy.get_param("~frame_width", 640),
         frame_height = rospy.get_param("~frame_height", 480),
-        min_linear_speed = rospy.get_param("~min_linear_speed", 0.1),
-        max_linear_speed = rospy.get_param("~max_linear_speed", 0.95),
-        min_angular_speed = rospy.get_param("~min_angular_speed", 0.1),
-        max_angular_speed = rospy.get_param("~max_angular_speed", 0.95),
         control_rate = rospy.get_param("~control_rate", 30),
         detection_timeout = rospy.get_param("~detected_person_timeout", 3),
-        gesture_topic = rospy.get_param("~gesture_topic", "periodic_gestures"),
-        person_topic = rospy.get_param("~person_topic", "detected_people"),
+        gesture_topic = rospy.get_param("~gesture_topic", "periodic_gestures/gestures"),
+        person_topic = rospy.get_param("~person_topic", "person_detection/people"),
         vel_topic = rospy.get_param("~cmd_vel_topic", "husky/plan_cmd_vel"))
 
     pf = people_follow(config)
