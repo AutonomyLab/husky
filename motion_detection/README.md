@@ -20,6 +20,7 @@ This slightly complicated convention is used in all of the image processing for 
 | `~motion_threshold`   | Integer    | `1`     |
 | `~hysteresis_delay`  | Integer    | `5`  |
 | `~hysteresis_decay`  | Integer    | `2`  |
+| `~publish_interval`  | Float    | `1.0`  |
 | `~image_topic`   | String    | `axis/image_raw/decompressed`     |
 | `~motion_topic`  | String    | `motion_detection/motion`  |
 | `~viz_topic`  | String    | `motion_detection/viz`  |
