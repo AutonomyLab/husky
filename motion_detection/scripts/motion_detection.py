@@ -15,7 +15,7 @@ from cv_bridge import CvBridge, CvBridgeError
 
 class MotionDetector:
     
-    def __init__(self):
+    def __init__(self, config):
         self.__dict__.update(config)
 
         self.fgbg = cv2.BackgroundSubtractorMOG()
@@ -148,20 +148,20 @@ class motion_detection:
 
         config = dict(
             # motion detection parameters
-            self.MOTION_WINDOW_SIZE = rospy.get_param("~motion_region_size", 25),
-            self.MOTION_THRESHOLD = rospy.get_param("~motion_threshold", 1),
+            MOTION_WINDOW_SIZE = rospy.get_param("~motion_region_size", 25),
+            MOTION_THRESHOLD = rospy.get_param("~motion_threshold", 1),
 
             # how long to require motion to stick around
-            self.MIN_HYSTERESIS_FRAMES = rospy.get_param("~hysteresis_delay", 2),
+            MIN_HYSTERESIS_FRAMES = rospy.get_param("~hysteresis_delay", 2),
 
             # how quickly to decay non-persistent cells
-            self.DECAY_RATE = rospy.get_param("~hysteresis_decay", 1),
+            DECAY_RATE = rospy.get_param("~hysteresis_decay", 1),
 
             # so we only publish every N frames
-            self.publish_interval = rospy.get_param("~publish_interval", 30)),
+            publish_interval = rospy.get_param("~publish_interval", 30),
         
-            self.CALLBACK = self.publish_motion,
-            self.VIZ_CALLBACK = self.publish_viz)
+            CALLBACK = self.publish_motion,
+            VIZ_CALLBACK = self.publish_viz)
 
         self.detector = MotionDetector(config)
 
@@ -219,6 +219,6 @@ class motion_detection:
 
 #-----------------------------------------------------------------
 
-   if __name__ == "__main__":
+if __name__ == "__main__":
     detector_node = motion_detection()
     rospy.spin()

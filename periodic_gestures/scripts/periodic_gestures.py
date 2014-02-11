@@ -228,7 +228,11 @@ class OscillationDetector:
                 for index in class_members:
                     x = X[index]
                     if k == -1:
-                        self.outliers.append(((x[0], x[1], x[0]+self.SPATIAL_WINDOW_X, x[1]+self.SPATIAL_WINDOW_Y), [], True))
+                        x0 = x[0]-self.SPATIAL_WINDOW_X/2
+                        y0 = x[1]-self.SPATIAL_WINDOW_Y/2
+                        x1 = x0+self.SPATIAL_WINDOW_X
+                        y1 = y0+self.SPATIAL_WINDOW_Y
+                        self.outliers.append(((x0,y0,x1,y1), [], True))
                     if x[0] < min_x:
                         min_x = x[0]
                     if x[0] > max_x:
@@ -360,7 +364,7 @@ class periodic_gestures:
         self.color_image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="bgr8")
         self.color_image = np.asarray(cv.GetMat(self.color_image))
 
-        self.detector_apply_frame(self.image)
+        self.detector.apply_frame(self.image)
         
 #-----------------------------------------------------------------
 
@@ -370,9 +374,9 @@ class periodic_gestures:
         super_polygon = []
         for rect in gestures:
             p0 = (rect[0][0], rect[0][1])
-            p1 = (p0[0] + self.SPATIAL_WINDOW_X, p0[1])
-            p2 = (rect[0][2], rect[0][3])
-            p3 = (p0[0], p0[1] + self.SPATIAL_WINDOW_Y)
+            p2 = (rect[1][0], rect[1][1])
+            p1 = (p2[0], p0[1])
+            p3 = (p0[0], p2[1])
 
             super_polygon.append(Point32(x=p0[0], y=p0[1], z=0))
             super_polygon.append(Point32(x=p1[0], y=p1[1], z=0))

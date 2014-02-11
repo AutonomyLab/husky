@@ -57,13 +57,12 @@ class person_detection:
             hog_padding = (rospy.get_param("~hog_padding",2), rospy.get_param("~hog_padding",2)),
             hog_scale = rospy.get_param("~hog_scale", 1.075),
             camera_resolution_x = 640,
-            camera_resolution_y = 480,
-            image_encoding = "bgr8")
+            camera_resolution_y = 480)
 
         self.detector = PersonDetector(config)
 
-        self.detected_people_topic = rospy.get_param("~detected_people_topic", "person_detection/people"),
-        self.image_topic = rospy.get_param("~image_topic", "axis/image_raw/decompressed"),
+        self.detected_people_topic = rospy.get_param("~detected_people_topic", "person_detection/people")
+        self.image_topic = rospy.get_param("~image_topic", "axis/image_raw/decompressed")
         self.visualization_topic = rospy.get_param("~visualization_topic", "person_detection/viz")
         self.setup_ros_node()
 
@@ -136,7 +135,7 @@ class person_detection:
 
     def ros_msg_to_cv2(self, ros_msg):
         try:
-            cv_image = self.cv_bridge.imgmsg_to_cv(ros_msg, desired_encoding=self.image_encoding)
+            cv_image = self.cv_bridge.imgmsg_to_cv(ros_msg, desired_encoding="bgr8")
         except CvBridgeError, e:
             print e
 
