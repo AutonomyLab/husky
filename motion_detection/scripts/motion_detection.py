@@ -46,6 +46,12 @@ class motion_detection:
 
         self.image_sub = rospy.Subscriber(rospy.get_param("~image_topic", "axis/image_raw/decompressed"), Image, self.handle_image)
 
+        # motion detections
+        self.detections = set()
+
+        # so we only publish every N seconds
+        self.publish_interval = rospy.Duration(rospy.get_param("~publish_interval", 1.0))
+        self.last_publish = rospy.Time.now()
 
 #-----------------------------------------------------------------
 
@@ -65,19 +71,27 @@ class motion_detection:
 
         # HYSTERESIS
         rectangles = self.apply_hysteresis(significant_motion)
+
+        self.detections.update(rectangles)
         
-        # PUBLISH SUPER-POLYGON
-        super_polygon = []
-        for rect in rectangles:
-            super_polygon.append(Point32(x=rect[0][0], y=rect[0][1], z=0))
-            super_polygon.append(Point32(x=rect[1][0], y=rect[1][1], z=0))
-            super_polygon.append(Point32(x=rect[2][0], y=rect[2][1], z=0))
-            super_polygon.append(Point32(x=rect[3][0], y=rect[3][1], z=0))
+        if rospy.Time.now() - self.last_publish > self.publish_interval:
+            # PUBLISH SUPER-POLYGON
+            super_polygon = []
+            for rect in self.detections:
+                super_polygon.append(Point32(x=rect[0][0], y=rect[0][1], z=0))
+                super_polygon.append(Point32(x=rect[1][0], y=rect[1][1], z=0))
+                super_polygon.append(Point32(x=rect[2][0], y=rect[2][1], z=0))
+                super_polygon.append(Point32(x=rect[3][0], y=rect[3][1], z=0))
 
-        self.motion_pub.publish(Polygon(super_polygon))
+            self.motion_pub.publish(Polygon(super_polygon))
 
-        if self.viz_pub.get_num_connections() > 0:
-            self.publish_viz(rectangles, self.image)
+            if self.viz_pub.get_num_connections() > 0:
+                self.publish_viz(self.detections, self.image)
+
+            self.detections = set()
+            # reset our background subtractor periodically
+            self.fgbg = cv2.BackgroundSubtractorMOG()
+            self.last_publish = rospy.Time.now()
 
 #-----------------------------------------------------------------
 
