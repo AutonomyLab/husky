@@ -13,6 +13,9 @@ import rospy, roslib
 from geometry_msgs.msg import Polygon, Point32
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+from sklearn.cluster import DBSCAN
+from sklearn import metrics
+from sklearn.preprocessing import StandardScaler
 import math
 
 #-----------------------------------------------------------------
@@ -32,7 +35,6 @@ class periodic_gestures:
 
         # window of frames over which to do Fourier analysis
         self.TEMPORAL_WINDOW = rospy.get_param("~temporal_window", 60)
-        # self.FREQ_COMPONENTS = [3,4,5,6,7]
 
         self.MIN_GESTURE_FREQUENCY = rospy.get_param("~min_gesture_freq", 0.5)
         self.MAX_GESTURE_FREQUENCY = rospy.get_param("~max_gesture_freq", 2)
@@ -45,6 +47,9 @@ class periodic_gestures:
         smallest_bin = int(self.MIN_GESTURE_FREQUENCY / bin_width) + 1
         freq_range = self.MAX_GESTURE_FREQUENCY - self.MIN_GESTURE_FREQUENCY
         largest_bin = smallest_bin + int(freq_range / bin_width)
+        if smallest_bin < 2:
+            smallest_bin += 1
+            largest_bin += 1
 
         # these are our frequency bins of interest
         self.FREQ_COMPONENTS = range(smallest_bin, largest_bin+1)
@@ -52,10 +57,10 @@ class periodic_gestures:
 
         # how picky are we about what constitutes a significant
         # peak in the frequency domain
-        self.PEAK_STDEVS = rospy.get_param("~peak_sensitivity", 7)
+        self.PEAK_STDEVS = rospy.get_param("~peak_sensitivity", 4.5)
 
         # peaks must be at least this high to qualify
-        self.MIN_FREQ_INTENSITY = rospy.get_param("~min_peak", 40)
+        self.MIN_FREQ_INTENSITY = rospy.get_param("~min_peak", 30)
 
         # size of the overlapping subregion windows
         self.SPATIAL_WINDOW_X = rospy.get_param("~spatial_window_x", 10)
@@ -63,6 +68,10 @@ class periodic_gestures:
 
         # overlap factor of 2 means each window overlaps the previous by half
         self.OVERLAP_FACTOR = rospy.get_param("~overlap_factor", 2)
+
+        # clustering algorithm
+        self.EPS = rospy.get_param("~clustering_epsilon", 1)
+        self.MIN_SAMPLES = rospy.get_param("~clustering_samples", 2)
 
         # filled in as we receive images
         self.WIDTH = 0
@@ -82,6 +91,13 @@ class periodic_gestures:
 
         # the overlapping windows in the image to check
         self.spatial_windows = None
+
+        # for calculating average time per frame
+        self.per_frame_time = []
+
+        # clusters and individual regions
+        self.clusters = []
+        self.periodic_windows = []
 
 #-----------------------------------------------------------------
 
@@ -114,6 +130,9 @@ class periodic_gestures:
         self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="mono8")
         self.image = np.asarray(cv.GetMat(self.image))
 
+        self.color_image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="bgr8")
+        self.color_image = np.asarray(cv.GetMat(self.color_image))
+
         # wait for motion detection first
         if self.motion_areas == None:
             return
@@ -130,10 +149,18 @@ class periodic_gestures:
             # determine the interesting regions for the upcoming round
             self.determine_windows_to_check()
 
+            time_series = np.asarray(self.per_frame_time)
+            avg = np.mean(time_series)
+            print "mean processing per frame: %s seconds" % avg
+            self.per_frame_time = []
 
         # get the average pixel intensity over each
         # of the windows of interest for this round
         self.average_each_subwindow()
+
+        # visualization
+        if self.viz_pub.get_num_connections() > 0:
+            self.publish_viz(self.periodic_windows, self.clusters)
 
         # end, increment window index with rollover
         self.temporal_window_index += 1
@@ -149,6 +176,8 @@ class periodic_gestures:
 
         if self.motion_areas == None:
             return
+
+        start_time = rospy.Time.now()
 
         # keep track of the areas we monitor
         # so we don't track the same rectangle twice
@@ -180,6 +209,9 @@ class periodic_gestures:
                 x += (self.SPATIAL_WINDOW_X / self.OVERLAP_FACTOR)
                 y += (self.SPATIAL_WINDOW_Y / self.OVERLAP_FACTOR)
 
+        end_time = rospy.Time.now()
+        print "Determined windows of interest: %s seconds" % (end_time-start_time).to_sec()
+
 #-----------------------------------------------------------------
     
     def identify_periodic_windows(self):
@@ -190,10 +222,15 @@ class periodic_gestures:
         if not self.temporal_window_full:
             return 
 
-        motion_detected_windows = []
+        start_time = rospy.Time.now()
 
+        self.periodic_windows = []
+        X = []
+
+        print "evaluating %s regions of interest" % len(self.spatial_windows)
         for window in self.spatial_windows:
             time_domain = np.asarray(window[1])
+            avg_intensity = np.mean(time_domain)
             frequency_domain = abs(np.fft.fft(time_domain))
 
             avg = np.sum(frequency_domain[1:len(frequency_domain)/2]) / (float(len(frequency_domain)/2-1))
@@ -203,19 +240,88 @@ class periodic_gestures:
             threshold = avg + std*self.PEAK_STDEVS
 
             periodic = False
+            highest = 0
             for f in self.FREQ_COMPONENTS:
+                if frequency_domain[f] > highest:
+                    highest = frequency_domain[f]
                 if (frequency_domain[f] >= threshold and
                         frequency_domain[f] > frequency_domain[1]):
                     periodic = True
 
-            if periodic:
-                motion_detected_windows.append(window)
 
-        # run through motion_detected_windows and publish
+            if periodic:
+                self.periodic_windows.append(window)
+
+                # features for clustering
+                X.append((window[0][0] + self.SPATIAL_WINDOW_X/2,
+                        window[0][1] + self.SPATIAL_WINDOW_Y/2,
+                        threshold,
+                        highest,
+                        avg_intensity))
+
+        self.clusters = []
+        if len(X) > 0:
+            # cluster these positive rectangles somehow so we can
+            # have multiple different periodic motions detected in the
+            # same scene
+            X = np.asarray(X)
+
+            # normalize features
+            scaled_X = StandardScaler().fit_transform(X)        
+
+            # cluster with DBSCAN
+            db = DBSCAN(eps=self.EPS, min_samples=self.MIN_SAMPLES).fit(scaled_X)
+
+            # process results
+            core_samples = db.core_sample_indices_
+            labels = db.labels_
+
+            # Number of clusters in labels, ignoring noise if present.
+            n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+
+            print('Estimated number of clusters: %d' % n_clusters_)
+
+            unique_labels = set(labels)
+            for k in unique_labels:
+                class_members = [index[0] for index in np.argwhere(labels == k)]
+
+                min_x = sys.maxint
+                max_x = -1
+                min_y = sys.maxint
+                max_y = -1
+
+                for index in class_members:
+                    x = X[index]
+                    if x[0] < min_x:
+                        min_x = x[0]
+                    if x[0] > max_x:
+                        max_x = x[0]
+                    if x[1] < min_y:
+                        min_y = x[1]
+                    if x[1] > max_y:
+                        max_y = x[1]
+
+                height = max_y - min_y
+                width = max_x - min_x
+
+                height = max(width,height)
+                height = width = height + self.SPATIAL_WINDOW_X*2
+
+                center_x = (max_x + min_x) / 2
+                center_y = (max_y + min_y) / 2
+
+                top_left = (int(center_x - width/2), 
+                        int(center_y - height/2))
+                bottom_right = (int(center_x + width/2), 
+                        int(center_y + height/2))
+
+                self.clusters.append((top_left, bottom_right))
+
+        # run through self.periodic_windows and publish
         # a super-polygon the represents the locations where
         # periodic motion in the correct frequency range was found
         super_polygon = []
-        for window in motion_detected_windows:
+        for window in self.periodic_windows:
             p0 = (window[0][0], window[0][1])
             p1 = (p0[0] + self.SPATIAL_WINDOW_X, p0[1])
             p2 = (window[0][2], window[0][3])
@@ -228,18 +334,23 @@ class periodic_gestures:
 
         self.gesture_pub.publish(super_polygon)
 
-        if self.viz_pub.get_num_connections() > 0:
-            self.publish_viz(motion_detected_windows, self.image)
-        
-        # TODO: cluster these positive rectangles somehow so we can
-        # have multiple different periodic motions detected in the
-        # same scene
+        end_time = rospy.Time.now()
+        print "identified periodic regions in %s seconds" % (end_time-start_time).to_sec()
 
 #-----------------------------------------------------------------
 
-    def publish_viz(self, rectangles, img):
+    def publish_viz(self, rectangles, clusters):
+        img = self.color_image
+
         for rect in rectangles:
-            cv2.rectangle(img, rect[0][0], rect[0][2], (255, 255, 255))
+            p0 = (int(rect[0][0]), int(rect[0][1]))
+            p1 = (int(rect[0][2]), int(rect[0][3]))
+            cv2.rectangle(img, p0, p1, (255, 255, 255))
+
+        for rect in clusters:
+            p0 = rect[0]
+            p1 = rect[1]
+            cv2.rectangle(img, p0, p1, (0, 255, 0))
 
         img = cv.fromarray(img)
         msg = self.cv_bridge.cv_to_imgmsg(img, encoding="bgr8")
@@ -259,6 +370,8 @@ class periodic_gestures:
         # or at each frame of the round once the temporal window
         # is full
 
+        start_time = rospy.Time.now()
+
         for window in self.spatial_windows:
             ymin = window[0][1]
             ymax = window[0][3]+1
@@ -270,6 +383,9 @@ class periodic_gestures:
             avg = np.sum(subimage) / (self.SPATIAL_WINDOW_X*self.SPATIAL_WINDOW_Y)
 
             window[1].append(avg)
+
+        end_time = rospy.Time.now()
+        self.per_frame_time.append((end_time-start_time).to_sec())
 
 #-----------------------------------------------------------------
 # END CLASS PERIODIC_GESTURES
