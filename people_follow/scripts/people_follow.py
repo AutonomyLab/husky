@@ -146,8 +146,9 @@ class people_follow:
         if self.target == None:
             return (0,0)
         else:
-            linear = 1 - 2*abs(self.target-0.5)
-            angular = -2*self.target + 1
+            theta = -np.pi/2 + self.target*np.pi
+            angular = -np.sin(theta)
+            linear = np.cos(theta)
             
             linear *= self.DRIVE_RATE
             angular *= self.TURN_RATE
