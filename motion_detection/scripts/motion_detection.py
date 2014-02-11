@@ -13,10 +13,10 @@ from cv_bridge import CvBridge, CvBridgeError
 
 #-----------------------------------------------------------------
 
-class motion_detection:
-
+class MotionDetector:
+    
     def __init__(self):
-        rospy.init_node("motion_detection")
+        self.__dict__.update(config)
 
         self.fgbg = cv2.BackgroundSubtractorMOG()
         self.hysteresis_sum = None
@@ -28,39 +28,25 @@ class motion_detection:
         # color depth, probably 3
         self.DEPTH = 3
 
-        # motion detection parameters
-        self.MOTION_WINDOW_SIZE = rospy.get_param("~motion_region_size", 25)
-        self.MOTION_THRESHOLD = rospy.get_param("~motion_threshold", 1)
-
-        # how long to require motion to stick around
-        self.MIN_HYSTERESIS_FRAMES = rospy.get_param("~hysteresis_delay", 2)
-
-        # how quickly to decay non-persistent cells
-        self.DECAY_RATE = rospy.get_param("~hysteresis_decay", 1)
-
-        self.cv_bridge = CvBridge()
-
-        self.motion_pub = rospy.Publisher(rospy.get_param("~motion_topic", "motion_detection/motion"), Polygon)
-
-        self.viz_pub = rospy.Publisher(rospy.get_param("~viz_topic", "motion_detection/viz"), Image)
-
-        self.image_sub = rospy.Subscriber(rospy.get_param("~image_topic", "axis/image_raw/decompressed"), Image, self.handle_image)
-
         # motion detections
         self.detections = set()
 
-        # so we only publish every N seconds
-        self.publish_interval = rospy.Duration(rospy.get_param("~publish_interval", 1.0))
-        self.last_publish = rospy.Time.now()
+        # publish every time this equals publish interval
+        self.frame_count = 0
 
 #-----------------------------------------------------------------
 
-    def handle_image(self, data):
-        if self.no_one_listening():
-            return
+    def reset_detector(self):
+        self.detections = set()
+        # reset our background subtractor periodically
+        self.fgbg = cv2.BackgroundSubtractorMOG()
+        self.frame_count = 0
 
-        self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="bgr8")
-        self.image = np.asarray(cv.GetMat(self.image))
+#-----------------------------------------------------------------
+
+    def apply_frame(self, img):
+        self.image = img
+
         self.HEIGHT, self.WIDTH, self.DEPTH = self.image.shape
 
         # BACKGROUND SUBTRACTION
@@ -73,44 +59,18 @@ class motion_detection:
         rectangles = self.apply_hysteresis(significant_motion)
 
         self.detections.update(rectangles)
+
+        self.frame_count += 1
         
-        if rospy.Time.now() - self.last_publish > self.publish_interval:
+        self.VIZ_CALLBACK(self.detections, self.image)
+
+        if self.frame_count >= self.publish_interval:
             # PUBLISH SUPER-POLYGON
-            super_polygon = []
-            for rect in self.detections:
-                super_polygon.append(Point32(x=rect[0][0], y=rect[0][1], z=0))
-                super_polygon.append(Point32(x=rect[1][0], y=rect[1][1], z=0))
-                super_polygon.append(Point32(x=rect[2][0], y=rect[2][1], z=0))
-                super_polygon.append(Point32(x=rect[3][0], y=rect[3][1], z=0))
-
-            self.motion_pub.publish(Polygon(super_polygon))
-
-            if self.viz_pub.get_num_connections() > 0:
-                self.publish_viz(self.detections, self.image)
-
-            self.detections = set()
-            # reset our background subtractor periodically
-            self.fgbg = cv2.BackgroundSubtractorMOG()
-            self.last_publish = rospy.Time.now()
+            self.CALLBACK(self.detections)
+            self.reset_detector()
 
 #-----------------------------------------------------------------
-
-    def no_one_listening(self):
-        return (self.motion_pub.get_num_connections() < 1 and 
-                self.viz_pub.get_num_connections() < 1)
-
-#-----------------------------------------------------------------
-
-    def publish_viz(self, rectangles, img):
-        for rect in rectangles:
-            cv2.rectangle(img, rect[0], rect[2], (255, 255, 255))
-
-        img = cv.fromarray(img)
-        msg = self.cv_bridge.cv_to_imgmsg(img, encoding="bgr8")
-        self.viz_pub.publish(msg)
-
-#-----------------------------------------------------------------
-    
+ 
     def apply_hysteresis(self, significant_motion):
         if self.hysteresis_sum == None:
             self.hysteresis_sum = np.zeros((self.WIDTH/self.MOTION_WINDOW_SIZE, self.HEIGHT/self.MOTION_WINDOW_SIZE))
@@ -178,7 +138,87 @@ class motion_detection:
         return sig
 
 #-----------------------------------------------------------------
+# END CLASS MOTIONDETECTOR
+#-----------------------------------------------------------------
 
-if __name__ == "__main__":
+class motion_detection:
+
+    def __init__(self):
+        rospy.init_node("motion_detection")
+
+        config = dict(
+            # motion detection parameters
+            self.MOTION_WINDOW_SIZE = rospy.get_param("~motion_region_size", 25),
+            self.MOTION_THRESHOLD = rospy.get_param("~motion_threshold", 1),
+
+            # how long to require motion to stick around
+            self.MIN_HYSTERESIS_FRAMES = rospy.get_param("~hysteresis_delay", 2),
+
+            # how quickly to decay non-persistent cells
+            self.DECAY_RATE = rospy.get_param("~hysteresis_decay", 1),
+
+            # so we only publish every N frames
+            self.publish_interval = rospy.get_param("~publish_interval", 30)),
+        
+            self.CALLBACK = self.publish_motion,
+            self.VIZ_CALLBACK = self.publish_viz)
+
+        self.detector = MotionDetector(config)
+
+        self.motion_pub = rospy.Publisher(rospy.get_param("~motion_topic", "motion_detection/motion"), Polygon)
+
+        self.viz_pub = rospy.Publisher(rospy.get_param("~viz_topic", "motion_detection/viz"), Image)
+
+        self.image_sub = rospy.Subscriber(rospy.get_param("~image_topic", "axis/image_raw/decompressed"), Image, self.handle_image)
+
+
+        self.cv_bridge = CvBridge()
+
+#-----------------------------------------------------------------
+
+    def handle_image(self, data):
+        if self.no_one_listening():
+            self.detector.reset_detector()
+            return
+
+        self.image = self.cv_bridge.imgmsg_to_cv(data, desired_encoding="bgr8")
+        self.image = np.asarray(cv.GetMat(self.image))
+
+        self.detector.apply_frame(self.image)
+
+#-----------------------------------------------------------------
+
+    def no_one_listening(self):
+        return (self.motion_pub.get_num_connections() < 1 and 
+                self.viz_pub.get_num_connections() < 1)
+
+#-----------------------------------------------------------------
+
+    def publish_motion(self, motion):
+        super_polygon = []
+        for rect in motion:
+            super_polygon.append(Point32(x=rect[0][0], y=rect[0][1], z=0))
+            super_polygon.append(Point32(x=rect[1][0], y=rect[1][1], z=0))
+            super_polygon.append(Point32(x=rect[2][0], y=rect[2][1], z=0))
+            super_polygon.append(Point32(x=rect[3][0], y=rect[3][1], z=0))
+
+        self.motion_pub.publish(Polygon(super_polygon))
+
+#-----------------------------------------------------------------
+
+    def publish_viz(self, rectangles, img):
+        if self.viz_pub.get_num_connections() < 1:
+            return
+
+        for rect in rectangles:
+            cv2.rectangle(img, rect[0], rect[2], (255, 255, 255))
+
+        img = cv.fromarray(img)
+        msg = self.cv_bridge.cv_to_imgmsg(img, encoding="bgr8")
+        self.viz_pub.publish(msg)
+
+#-----------------------------------------------------------------
+
+   if __name__ == "__main__":
     detector_node = motion_detection()
     rospy.spin()
