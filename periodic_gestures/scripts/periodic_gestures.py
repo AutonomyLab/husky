@@ -97,6 +97,7 @@ class periodic_gestures:
 
         # clusters and individual regions
         self.clusters = []
+        self.outliers = []
         self.periodic_windows = []
 
 #-----------------------------------------------------------------
@@ -160,7 +161,7 @@ class periodic_gestures:
 
         # visualization
         if self.viz_pub.get_num_connections() > 0:
-            self.publish_viz(self.periodic_windows, self.clusters)
+            self.publish_viz(self.periodic_windows, self.clusters, self.outliers)
 
         # end, increment window index with rollover
         self.temporal_window_index += 1
@@ -260,6 +261,7 @@ class periodic_gestures:
                         avg_intensity))
 
         self.clusters = []
+        self.outliers = []
         if len(X) > 0:
             # cluster these positive rectangles somehow so we can
             # have multiple different periodic motions detected in the
@@ -292,6 +294,8 @@ class periodic_gestures:
 
                 for index in class_members:
                     x = X[index]
+                    if k == -1:
+                        self.outliers.append(((x[0], x[1], x[0]+self.SPATIAL_WINDOW_X, x[1]+self.SPATIAL_WINDOW_Y), [], True))
                     if x[0] < min_x:
                         min_x = x[0]
                     if x[0] > max_x:
@@ -315,7 +319,9 @@ class periodic_gestures:
                 bottom_right = (int(center_x + width/2), 
                         int(center_y + height/2))
 
-                self.clusters.append((top_left, bottom_right))
+                # don't consider outliers a cluster
+                if k != -1:
+                    self.clusters.append((top_left, bottom_right))
 
         # run through self.periodic_windows and publish
         # a super-polygon the represents the locations where
@@ -339,7 +345,7 @@ class periodic_gestures:
 
 #-----------------------------------------------------------------
 
-    def publish_viz(self, rectangles, clusters):
+    def publish_viz(self, rectangles, clusters, outliers):
         img = self.color_image
 
         for rect in rectangles:
@@ -351,6 +357,11 @@ class periodic_gestures:
             p0 = rect[0]
             p1 = rect[1]
             cv2.rectangle(img, p0, p1, (0, 255, 0))
+
+        for rect in outliers:
+            p0 = (int(rect[0][0]), int(rect[0][1]))
+            p1 = (int(rect[0][2]), int(rect[0][3]))
+            cv2.rectangle(img, p0, p1, (0, 0, 0))
 
         img = cv.fromarray(img)
         msg = self.cv_bridge.cv_to_imgmsg(img, encoding="bgr8")
