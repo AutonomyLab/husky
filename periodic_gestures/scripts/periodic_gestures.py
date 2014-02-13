@@ -174,14 +174,16 @@ class OscillationDetector:
             threshold = avg + std*self.PEAK_STDEVS
 
             periodic = False
-            highest = 0
+            avg_bin = 0
+            total_energy = 0
             for f in self.FREQ_COMPONENTS:
-                if frequency_domain[f] > highest:
-                    highest = frequency_domain[f]
+                avg_bin += f * frequency_domain[f]
+                total_energy += frequency_domain[f]
                 if (frequency_domain[f] >= threshold and
                         frequency_domain[f] > frequency_domain[1]):
                     periodic = True
 
+            avg_bin /= float(total_energy)
 
             if periodic:
                 self.periodic_windows.append(window)
@@ -189,8 +191,7 @@ class OscillationDetector:
                 # features for clustering
                 X.append((window[0][0] + self.SPATIAL_WINDOW_X/2,
                         window[0][1] + self.SPATIAL_WINDOW_Y/2,
-                        threshold,
-                        highest,
+                        avg_bin,
                         avg_intensity))
 
         self.clusters = []
