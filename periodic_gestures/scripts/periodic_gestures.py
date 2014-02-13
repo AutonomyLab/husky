@@ -310,10 +310,10 @@ class periodic_gestures:
 
             # how picky are we about what constitutes a significant
             # peak in the frequency domain
-            PEAK_STDEVS = rospy.get_param("~peak_sensitivity", 4.5),
+            PEAK_STDEVS = rospy.get_param("~peak_sensitivity", 3.5),
 
             # peaks must be at least this high to qualify
-            MIN_FREQ_INTENSITY = rospy.get_param("~min_peak", 30),
+            MIN_FREQ_INTENSITY = rospy.get_param("~min_peak", 40),
 
             # size of the overlapping subregion windows
             SPATIAL_WINDOW_X = rospy.get_param("~spatial_window_x", 10),
@@ -323,8 +323,8 @@ class periodic_gestures:
             OVERLAP_FACTOR = rospy.get_param("~overlap_factor", 2),
 
             # clustering algorithm
-            EPS = rospy.get_param("~clustering_epsilon", 1),
-            MIN_SAMPLES = rospy.get_param("~clustering_samples", 2),
+            EPS = rospy.get_param("~clustering_epsilon", 0.55),
+            MIN_SAMPLES = rospy.get_param("~clustering_samples", 6),
             
             # detection callback
             DETECTION_CALLBACK = self.publish_gestures,
