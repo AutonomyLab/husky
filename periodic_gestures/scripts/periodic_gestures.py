@@ -129,24 +129,25 @@ class OscillationDetector:
             bottom_right = area[1]
 
             x = top_left[0]
-            y = top_left[1]
 
-            while x <= bottom_right[0] and y <= bottom_right[1]:
-                if flagged_areas[x,y] == 0:
-                    # add rectangle to regions of interest
+            while x <= bottom_right[0]:
+                y = top_left[1]
+                while y <= bottom_right[1]:
+                    if flagged_areas[x,y] == 0:
+                        # add rectangle to regions of interest
 
-                    window = ((x,y,
-                        x+self.SPATIAL_WINDOW_X,
-                        y+self.SPATIAL_WINDOW_Y),
-                        [], # average pixel level over the temporal window
-                        False) # whether periodic motion was detected
+                        window = ((x,y,
+                            x+self.SPATIAL_WINDOW_X,
+                            y+self.SPATIAL_WINDOW_Y),
+                            [], # average pixel level over the temporal window
+                            False) # whether periodic motion was detected
 
-                    self.spatial_windows.append(window)
+                        self.spatial_windows.append(window)
 
-                    flagged_areas[x,y] = 1
+                        flagged_areas[x,y] = 1
 
+                    y += (self.SPATIAL_WINDOW_Y / self.OVERLAP_FACTOR)
                 x += (self.SPATIAL_WINDOW_X / self.OVERLAP_FACTOR)
-                y += (self.SPATIAL_WINDOW_Y / self.OVERLAP_FACTOR)
 
 #-----------------------------------------------------------------
     
