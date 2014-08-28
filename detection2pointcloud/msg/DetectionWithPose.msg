@@ -1,0 +1,3 @@
+sensor_msgs/RegionOfInterest roi
+geometry_msgs/PoseStamped pose
+float32 height

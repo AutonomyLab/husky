@@ -1,0 +1,142 @@
+#! /usr/bin/env python
+
+import rospy
+import numpy
+import cv2
+import tf
+import math
+from cv_bridge import CvBridge, CvBridgeError
+from std_msgs.msg import *
+from geometry_msgs.msg import *
+from sensor_msgs.msg import *
+from detection2pointcloud.msg import DetectionWithPose
+
+#----------------------------------------------------------
+
+pointcloud_pub = None
+latest_image = None
+cv_bridge = None
+tl = None
+distance = 5 # 5 meters away
+height = 1.8 # 1.8 meters tall
+camera_fov_degrees = 65
+
+#----------------------------------------------------------
+
+def handle_image(ros_msg):
+    global latest_image
+    latest_image = cv_bridge.imgmsg_to_cv2(ros_msg, desired_encoding="bgr8")
+
+#----------------------------------------------------------
+
+def handle_detection_roi(roi):
+    if latest_image == None:
+        rospy.warning("Got a detection but no images.")
+        return
+
+    # calculate position
+    img_height, img_width, img_depth = latest_image.shape
+    x_ratio = float(roi.x_offset+roi.width/2) / img_width
+
+    heading = (0.5-x_ratio) * (camera_fov_degrees/2.0) / 180.0 * math.pi
+
+    x = distance * math.cos(heading)
+    y = distance * math.sin(heading)
+
+    publish_pointcloud(roi, x, y, height)        
+
+#----------------------------------------------------------
+
+def handle_detection_with_pose(ros_msg):
+    if latest_image == None:
+        rospy.warning("Got a detection but no images.")
+        return
+
+    roi = ros_msg.roi
+    pose = ros_msg.pose
+    height = ros_msg.height
+
+    local_pose_stamped = tl.transformPose("base_link", pose)
+    x = local_pose_stamped.pose.position.x
+    y = local_pose_stamped.pose.position.y
+
+    publish_pointcloud(roi, x, y, height)
+
+def publish_pointcloud(roi, x, y, height):
+    width = float(roi.width) / float(roi.height) * height # aspect ratio
+
+    if latest_image != None:
+        pc = PointCloud()
+
+        pc.header = Header()
+        pc.header.stamp = ros_msg.header.stamp
+        pc.header.frame_id = "base_link"
+
+        pc.channels = []
+        pc.channels.append(ChannelFloat32(name="r", values=[]))
+        pc.channels.append(ChannelFloat32(name="g", values=[]))
+        pc.channels.append(ChannelFloat32(name="b", values=[]))
+
+        pc.points = []
+
+        for px in range(roi.x_offset, roi.x_offset + roi.width):
+            for py in range(roi.y_offset, roi.y_offset + roi.height):
+                x_ratio = float(px - roi.x_offset) / roi.width
+                y_ratio = float(py - roi.y_offset) / roi.height
+
+                x_pos = diff_ratio * width - width/2 + x
+                y_pos = y
+                z_pos = y_ratio * height
+
+                pc.points.append(Point32(x=x_pos, y=y_pos, z=z_pos))
+
+                # red
+                pc.channels[0].values.append(latest_image[y][x][1]/255.0)
+                # green
+                pc.channels[1].values.append(latest_image[y][x][2]/255.0)
+                # blue
+                pc.channels[2].values.append(latest_image[y][x][0]/255.0)
+
+        pointcloud_pub.publish(pc)
+
+    else:
+        rospy.logwarning("Got a detection, but no images yet")
+
+#----------------------------------------------------------
+
+def main():
+    global pointcloud_pub, cv_bridge, tl
+    global distance, height, camera_fov_degrees
+
+    rospy.init_node("detection2pointcloud_node")
+
+    distance = rospy.get_param("default_distance", 5)
+    height = rospy.get_param("default_height", 1.8)
+    camera_fov_degrees = rospy.get_param("camera_fov_degrees", 65)
+
+    pointcloud_pub = rospy.Publisher("/detection2pointcloud/pointcloud",
+            PointCloud)
+
+    rospy.Subscriber("/detection2pointcloud/detection_with_pose", 
+            DetectionWithPose, 
+            handle_detection_with_pose)
+
+    rospy.Subscriber("/detection2pointcloud/detection_roi",
+            RegionOfInterest,
+            handle_detection_roi)
+
+    rospy.Subscriber("/camera/image_raw",
+            Image,
+            handle_image)
+
+    cv_bridge = CvBridge()
+
+    tl = tf.TransformListener()
+
+    while not rospy.is_shutdown():
+        rospy.spin()
+
+#----------------------------------------------------------
+
+if __name__ == "__main__":
+    main()
